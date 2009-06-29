@@ -32,11 +32,9 @@ public class FileCrawler
 
 	private FileCrawler()
 	{
-		try
-		{
+		try {
 			setPaths(Configuration.getInstance().getLibraryPaths());
-		} catch (SQLException e)
-		{
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}
