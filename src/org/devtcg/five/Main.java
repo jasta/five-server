@@ -2,11 +2,15 @@ package org.devtcg.five;
 
 import java.sql.SQLException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.devtcg.five.meta.FileCrawler;
 import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.server.HttpServer;
 
 public class Main {
+	private static final Log LOG = LogFactory.getLog(Main.class);
+
 	private static HttpServer mServer;
 	private static FileCrawler mCrawler;
 
@@ -52,6 +56,7 @@ public class Main {
 		mServer.start();
 
 		mCrawler = FileCrawler.getInstance();
+		mCrawler.setListener(mCrawlerListener);
 		mCrawler.startScan();
 	}
 
@@ -62,4 +67,25 @@ public class Main {
 			mQuitLock.notify();
 		}
 	}
+
+	private static final FileCrawler.Listener mCrawlerListener = new FileCrawler.Listener()
+	{
+		public void onFinished(boolean canceled)
+		{
+			if (LOG.isInfoEnabled())
+				LOG.info("onFinished: canceled=" + canceled);
+		}
+
+		public void onProgress(int scannedSoFar)
+		{
+			if (LOG.isInfoEnabled())
+				LOG.info("onProgress: " + scannedSoFar);
+		}
+
+		public void onStart()
+		{
+			if (LOG.isInfoEnabled())
+				LOG.info("onStart");
+		}
+	};
 }

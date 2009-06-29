@@ -30,6 +30,15 @@ public class FileCrawler
 	private CrawlerThread mThread;
 	private List<String> mPaths;
 
+	private Listener mListener;
+
+	public interface Listener
+	{
+		public void onStart();
+		public void onProgress(int scannedSoFar);
+		public void onFinished(boolean canceled);
+	}
+
 	private FileCrawler()
 	{
 		try {
@@ -50,6 +59,11 @@ public class FileCrawler
 	private void setPaths(List<String> paths)
 	{
 		mPaths = paths;
+	}
+
+	public void setListener(Listener l)
+	{
+		mListener = l;
 	}
 
 	public synchronized void startScan()
@@ -83,6 +97,8 @@ public class FileCrawler
 	{
 		private MetaProvider mTempProvider;
 		private MetaProvider mMainProvider;
+
+		private int mFilesScanned = 0;
 
 		public CrawlerThread(MetaProvider tempProvider)
 		{
@@ -240,21 +256,23 @@ public class FileCrawler
 				else
 					return mTempProvider.getSongDAO().insert(song);
 			} catch (CannotReadException e) {
-				if (LOG.isErrorEnabled())
-					LOG.error(file + ": unable to parse song: " + e);
+				if (LOG.isWarnEnabled())
+					LOG.warn(file + ": unable to parse song: " + e);
 			}
 
 			return -1;
 		}
 
-		private void handleFile(File file) throws SQLException
+		private boolean handleFile(File file) throws SQLException
 		{
 			String ext = FileUtils.getExtension(file);
 
 			if (isPlaylist(file, ext) == true)
-				handleFilePlaylist(file);
+				return handleFilePlaylist(file) != -1;
 			else if (isSong(file, ext) == true)
-				handleFileSong(file);
+				return handleFileSong(file) != -1;
+
+			return false;
 		}
 
 		private void traverse(File path) throws SQLException
@@ -268,7 +286,15 @@ public class FileCrawler
 				if (file.isDirectory() == true)
 					traverse(file);
 				else if (file.isFile() == true)
-					handleFile(file);
+				{
+					if (handleFile(file))
+					{
+						mFilesScanned++;
+
+						if (mListener != null)
+							mListener.onProgress(mFilesScanned);
+					}
+				}
 			}
 		}
 
@@ -324,6 +350,9 @@ public class FileCrawler
 
 		public void run()
 		{
+			if (mListener != null)
+				mListener.onStart();
+
 			try {
 				crawlImpl();
 			} catch (SQLException e) {
@@ -336,6 +365,9 @@ public class FileCrawler
 				synchronized (FileCrawler.this) {
 					mThread = null;
 				}
+
+				if (mListener != null)
+					mListener.onFinished(hasCanceled());
 			}
 		}
 	}
