@@ -3,7 +3,6 @@ package org.devtcg.five;
 import java.sql.SQLException;
 
 import org.devtcg.five.meta.FileCrawler;
-import org.devtcg.five.meta.MetaCollector;
 import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.server.HttpServer;
 

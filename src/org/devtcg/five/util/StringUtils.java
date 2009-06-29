@@ -23,4 +23,24 @@ public class StringUtils
 
 		return new String(hex);
 	}
+
+	public static boolean isEmpty(String string)
+	{
+		return (string == null || string.length() == 0);
+	}
+
+	/**
+	 * Applies heuristics to strip "The", "A", canonize "and", etc to format a
+	 * proper artist or album name into something that can be used for sorting
+	 * and comparison.
+	 */
+	public static String getNameMatch(String name)
+	{
+		if (name.startsWith("The "))
+			name = name.substring(4);
+		else if (name.startsWith("A "))
+			name = name.substring(2);
+
+		return name.replaceAll(" and ", " & ");
+	}
 }

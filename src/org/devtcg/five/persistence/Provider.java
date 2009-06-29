@@ -4,7 +4,6 @@ import java.sql.SQLException;
 
 public abstract class Provider
 {
-	/** @deprecated */
 	public abstract LockableConnection getConnection() throws SQLException;
 
 	public void lock() throws SQLException
