@@ -39,9 +39,6 @@ public abstract class DatabaseOpenHelper
 		if (version <= 0)
 			throw new IllegalArgumentException("version must be greater than 0");
 
-		if (name == null)
-			name = "tmp-foo";
-
 		mName = name;
 		mVersion = version;
 	}
