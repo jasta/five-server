@@ -24,6 +24,8 @@ public class FileUtils
 	public static boolean hasExtension(File file, String ext)
 	{
 		String fileExt = getExtension(file);
+		if (fileExt == null && ext == null)
+			return true;
 		return (fileExt != null && fileExt.equalsIgnoreCase(ext));
 	}
 
