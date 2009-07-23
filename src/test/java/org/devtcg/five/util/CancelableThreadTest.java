@@ -9,7 +9,8 @@ public class CancelableThreadTest extends TestCase
 		CancelableAndTestableThread thread = new CancelableAndTestableThread() {
 			private final Object mWaitUntilCanceled = new Object();
 
-			public void onRun() {
+			@Override
+			protected void onRun() {
 				synchronized(mWaitUntilCanceled) {
 					while (hasCanceled() == false) {
 						try {
@@ -20,10 +21,8 @@ public class CancelableThreadTest extends TestCase
 			}
 
 			@Override
-			public void requestCancel()
+			protected void onRequestCancel()
 			{
-				super.requestCancel();
-
 				synchronized(mWaitUntilCanceled) {
 					mWaitUntilCanceled.notify();
 				}
@@ -58,7 +57,7 @@ public class CancelableThreadTest extends TestCase
 			onRun();
 		}
 
-		public abstract void onRun();
+		protected abstract void onRun();
 
 		public void waitForStartup()
 		{

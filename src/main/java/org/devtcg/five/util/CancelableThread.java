@@ -10,9 +10,12 @@ public abstract class CancelableThread extends Thread
 			return;
 
 		interrupt();
+		onRequestCancel();
 
 		mCanceled = true;
 	}
+
+	protected void onRequestCancel() {}
 
 	public void requestCancelAndWait()
 	{
