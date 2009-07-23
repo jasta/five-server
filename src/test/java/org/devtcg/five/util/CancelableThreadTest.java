@@ -4,30 +4,9 @@ import junit.framework.TestCase;
 
 public class CancelableThreadTest extends TestCase
 {
-	public void testThreadCancel() throws Exception
+	public void testExpectedCancelation() throws Exception
 	{
-		CancelableAndTestableThread thread = new CancelableAndTestableThread() {
-			private final Object mWaitUntilCanceled = new Object();
-
-			@Override
-			protected void onRun() {
-				synchronized(mWaitUntilCanceled) {
-					while (hasCanceled() == false) {
-						try {
-							mWaitUntilCanceled.wait();
-						} catch (InterruptedException e) {}
-					}
-				}
-			}
-
-			@Override
-			protected void onRequestCancel()
-			{
-				synchronized(mWaitUntilCanceled) {
-					mWaitUntilCanceled.notify();
-				}
-			}
-		};
+		WaitUntilCanceledThread thread = new WaitUntilCanceledThread();
 
 		thread.start();
 		thread.waitForStartup();
@@ -40,6 +19,42 @@ public class CancelableThreadTest extends TestCase
 		thread.requestCancelAndWait();
 
 		/* If we made it here, the cancel worked. */
+		assertFalse(thread.isAlive());
+	}
+
+	public void testPrematureCancelation() throws Exception
+	{
+		WaitUntilCanceledThread thread = new WaitUntilCanceledThread();
+
+		thread.start();
+		thread.requestCancelAndWait();
+
+		assertFalse(thread.isAlive());
+	}
+
+	private static class WaitUntilCanceledThread extends CancelableAndTestableThread
+	{
+		private final Object mWaitUntilCanceled = new Object();
+
+		@Override
+		protected void onRun()
+		{
+			synchronized(mWaitUntilCanceled) {
+				while (hasCanceled() == false) {
+					try {
+						mWaitUntilCanceled.wait();
+					} catch (InterruptedException e) {}
+				}
+			}
+		}
+
+		@Override
+		protected void onRequestCancel()
+		{
+			synchronized(mWaitUntilCanceled) {
+				mWaitUntilCanceled.notify();
+			}
+		}
 	}
 
 	private abstract static class CancelableAndTestableThread extends CancelableThread
@@ -49,6 +64,9 @@ public class CancelableThreadTest extends TestCase
 
 		public void run()
 		{
+			if (hasCanceled())
+				return;
+
 			synchronized(mStartLock) {
 				mStarted = true;
 				mStartLock.notify();
