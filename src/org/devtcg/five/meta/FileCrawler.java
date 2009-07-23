@@ -1,7 +1,6 @@
 package org.devtcg.five.meta;
 
 import java.io.File;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -251,10 +250,8 @@ public class FileCrawler
 				SongDAO.Song song = mTempProvider.getSongDAO().newSong(file,
 					artistId, albumId, title, bitrate, length, track);
 
-				if (existingEntry != null)
-					return mTempProvider.getSongDAO().update(existingEntry._id, song);
-				else
-					return mTempProvider.getSongDAO().insert(song);
+				mTempProvider.getSongDAO().insertDiff(song,
+					existingEntry != null ? String.valueOf(existingEntry._id) : null);
 			} catch (CannotReadException e) {
 				if (LOG.isWarnEnabled())
 					LOG.warn(file + ": unable to parse song: " + e);
@@ -275,6 +272,10 @@ public class FileCrawler
 			return false;
 		}
 
+		/**
+		 * Recursively scan a given path, inserting any entries into the
+		 * temporary provider.
+		 */
 		private void traverse(File path) throws SQLException
 		{
 			File[] files = path.listFiles();
@@ -295,31 +296,6 @@ public class FileCrawler
 							mListener.onProgress(mFilesScanned);
 					}
 				}
-			}
-		}
-
-		private void mergeToMainProviderLocked() throws SQLException
-		{
-			Connection conn = mMainProvider.getConnection();
-			conn.setAutoCommit(false);
-			try {
-				/* do merge work... */
-				conn.commit();
-			} catch (SQLException e) {
-				conn.rollback();
-				throw e;
-			} finally {
-				conn.setAutoCommit(true);
-			}
-		}
-
-		private void mergeToMainProvider() throws SQLException
-		{
-			mMainProvider.lock();
-			try {
-				mergeToMainProviderLocked();
-			} finally {
-				mMainProvider.unlock();
 			}
 		}
 
@@ -345,7 +321,8 @@ public class FileCrawler
 			/* Delete every entry that hasn't been unmarked during traversal. */
 			deleteAllMarked();
 
-			mergeToMainProvider();
+			/* Merge all updated records into the main provider. */
+			mMainProvider.merge(mTempProvider);
 		}
 
 		public void run()

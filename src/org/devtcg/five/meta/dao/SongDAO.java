@@ -6,6 +6,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
+import org.devtcg.five.content.AbstractTableMerger;
+import org.devtcg.five.content.Cursor;
+import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -15,9 +18,6 @@ import org.devtcg.five.util.TimeUtils;
 public class SongDAO extends AbstractDAO
 {
 	private static final String TABLE = "songs";
-
-	private InsertHelper mInserter;
-	private InsertHelper mUpdater;
 
 	private interface Columns extends BaseColumns
 	{
@@ -61,11 +61,18 @@ public class SongDAO extends AbstractDAO
 	}
 
 	@Override
+	protected String getTable()
+	{
+		return TABLE;
+	}
+
+	@Override
 	public void createTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
 			Columns._ID + " INTEGER IDENTITY, " +
 			Columns._SYNC_TIME + " INTEGER, " +
+			Columns._SYNC_ID + " VARCHAR, " +
 			Columns.MBID + " CHAR(36), " +
 			Columns.FILENAME + " VARCHAR NOT NULL, " +
 			Columns.MIME_TYPE + " VARCHAR, " +
@@ -117,62 +124,48 @@ public class SongDAO extends AbstractDAO
 		}
 	}
 
+	private static void copySongToInsertHelper(InsertHelper helper, Song song)
+		throws SQLException
+	{
+		helper.bind(Columns.MBID, song.mbid);
+		helper.bind(Columns.FILENAME, song.filename);
+		helper.bind(Columns.MIME_TYPE, song.mimeType);
+		helper.bind(Columns.MTIME, song.mtime);
+		helper.bind(Columns.BITRATE, song.bitrate);
+		helper.bind(Columns.FILESIZE, song.filesize);
+		helper.bind(Columns.LENGTH, song.length);
+		helper.bind(Columns.TITLE, song.title);
+		helper.bind(Columns.TRACK, song.track);
+		helper.bind(Columns.ARTIST_ID, song.artistId);
+		helper.bind(Columns.ALBUM_ID, song.albumId);
+		helper.bind(Columns.MARK, song.mark);
+	}
+
 	public long insert(Song song) throws SQLException
 	{
-		synchronized (this) {
-			if (mInserter == null)
-			{
-				mInserter = new InsertHelper(mProvider.getConnection(),
-					"INSERT INTO " + TABLE + "(" +
-						Columns._SYNC_TIME + ", " +
-						Columns.MBID + ", " +
-						Columns.FILENAME + ", " +
-						Columns.MIME_TYPE + ", " +
-						Columns.MTIME + ", " +
-						Columns.BITRATE + ", " +
-						Columns.FILESIZE + ", " +
-						Columns.LENGTH + ", " +
-						Columns.TITLE + ", " +
-						Columns.TRACK + ", " +
-						Columns.ARTIST_ID + ", " +
-						Columns.ALBUM_ID + ", " +
-						Columns.MARK + ") " +
-					"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-			}
-		}
+		return insertDiff(song, null);
+	}
 
-		return mInserter.insert(TimeUtils.getUnixTimestamp(), song.mbid, song.filename,
-			song.mimeType, song.mtime, song.bitrate, song.filesize, song.length,
-			song.title, song.track, song.artistId, song.albumId, song.mark);
+	public long insertDiff(Song song, String existingId) throws SQLException
+	{
+		InsertHelper helper = getInsertHelper();
+
+		helper.prepareForInsert();
+		helper.bind(Columns._SYNC_TIME, TimeUtils.getUnixTimestamp());
+		helper.bind(Columns._SYNC_ID, existingId);
+		copySongToInsertHelper(helper, song);
+		return helper.insert();
 	}
 
 	public long update(long _id, Song song) throws SQLException
 	{
-		synchronized (this) {
-			if (mUpdater == null)
-			{
-				mUpdater = new InsertHelper(mProvider.getConnection(),
-					"UPDATE " + TABLE + " SET " +
-						Columns._SYNC_TIME + " = ?, " +
-						Columns.MBID + " = ?, " +
-						Columns.FILENAME + " = ?, " +
-						Columns.MIME_TYPE + " = ?, " +
-						Columns.MTIME + " = ?, " +
-						Columns.BITRATE + " = ?, " +
-						Columns.FILESIZE + " = ?, " +
-						Columns.LENGTH + " = ?, " +
-						Columns.TITLE + " = ?, " +
-						Columns.TRACK + " = ?, " +
-						Columns.ARTIST_ID + " = ?, " +
-						Columns.ALBUM_ID + " = ?, " +
-						Columns.MARK + " = ? " +
-					"WHERE " + Columns._ID + " = ?");
-			}
-		}
+		InsertHelper helper = getInsertHelper();
 
-		mUpdater.execute(TimeUtils.getUnixTimestamp(), song.mbid, song.filename,
-			song.mimeType, song.mtime, song.bitrate, song.filesize, song.length,
-			song.title, song.track, song.artistId, song.albumId, song.mark, _id);
+		helper.prepareForReplace();
+		helper.bind(Columns._ID, _id);
+		helper.bind(Columns._SYNC_TIME, TimeUtils.getUnixTimestamp());
+		copySongToInsertHelper(helper, song);
+		helper.execute();
 
 		return _id;
 	}
@@ -224,15 +217,15 @@ public class SongDAO extends AbstractDAO
 			for (int i = 1; i <= n; i++)
 			{
 				String columnName = meta.getColumnName(i);
-				if (columnName.equals(Columns._ID))
+				if (columnName.equalsIgnoreCase(Columns._ID))
 					_id = set.getLong(i);
-				else if (columnName.equals(Columns.MBID))
+				else if (columnName.equalsIgnoreCase(Columns.MBID))
 					mbid = set.getString(i);
-				else if (columnName.equals(Columns.FILENAME))
+				else if (columnName.equalsIgnoreCase(Columns.FILENAME))
 					filename = set.getString(i);
-				else if (columnName.equals(Columns.TITLE))
+				else if (columnName.equalsIgnoreCase(Columns.TITLE))
 					title = set.getString(i);
-				else if (columnName.equals(Columns.MTIME))
+				else if (columnName.equalsIgnoreCase(Columns.MTIME))
 					mtime = set.getLong(i);
 			}
 		}
@@ -240,6 +233,68 @@ public class SongDAO extends AbstractDAO
 		public void unmark() throws SQLException
 		{
 			SongDAO.this.unmark(_id);
+		}
+	}
+
+	public static class TableMerger extends AbstractTableMerger
+	{
+		public TableMerger()
+		{
+			super(TABLE);
+		}
+
+		@Override
+		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
+		{
+		}
+
+		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
+			throws SQLException
+		{
+			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
+
+			if (id == null)
+				helper.prepareForInsert();
+			else
+			{
+				helper.prepareForReplace();
+				helper.bind(Columns._ID, id);
+			}
+
+			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.MBID, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.FILENAME, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.MIME_TYPE, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.MTIME, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.BITRATE, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.FILESIZE, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.LENGTH, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.TITLE, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.TRACK, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.ARTIST_ID, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.ALBUM_ID, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.MARK, diffsCursor, helper);
+
+			if (id == null)
+				return helper.insert();
+			else
+			{
+				helper.execute();
+				return id;
+			}
+		}
+
+		@Override
+		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
+		{
+			return insertOrUpdateRow(main, null, diffsCursor);
+		}
+
+		@Override
+		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
+		{
+			insertOrUpdateRow(main, id, diffsCursor);
 		}
 	}
 }

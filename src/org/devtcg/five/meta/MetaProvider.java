@@ -2,20 +2,22 @@ package org.devtcg.five.meta;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
+import org.devtcg.five.content.AbstractTableMerger;
 import org.devtcg.five.meta.dao.AlbumDAO;
 import org.devtcg.five.meta.dao.ArtistDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.persistence.DatabaseOpenHelper;
 import org.devtcg.five.persistence.LockableConnection;
-import org.devtcg.five.persistence.Provider;
+import org.devtcg.five.persistence.SyncableProvider;
 
-public class MetaProvider extends Provider
+public class MetaProvider extends SyncableProvider
 {
 	private final DatabaseOpenHelper mHelper;
 
 	private static final String DB_NAME = "meta";
-	private static final int DB_VERSION = 5;
+	private static final int DB_VERSION = 6;
 
 	private static final MetaProvider INSTANCE = new MetaProvider(DB_NAME);
 
@@ -130,42 +132,13 @@ public class MetaProvider extends Provider
 		return mHelper.getConnection();
 	}
 
-//	public long insertArtist(String name) throws SQLException
-//	{
-//		LockableConnection conn = mHelper.getConnection();
-//
-//		conn.lock();
-//		try {
-//			DatabaseUtils.execute(conn, "INSERT INTO artists (name) VALUES (?)");
-//			return DatabaseUtils.getLastInsertId(conn);
-//		} finally {
-//			conn.unlock();
-//		}
-//	}
-//
-//	public void removeArtist(long id) throws SQLException
-//	{
-//		LockableConnection conn = mHelper.getConnection();
-//
-//		conn.lock();
-//		try {
-//			DatabaseUtils.execute(conn, "DELETE FROM artists WHERE id = ?",
-//				String.valueOf(id));
-//		} finally {
-//			conn.unlock();
-//		}
-//	}
-//
-//	public void updateArtist(long id, String name) throws SQLException
-//	{
-//		LockableConnection conn = mHelper.getConnection();
-//
-//		conn.lock();
-//		try {
-//			DatabaseUtils.execute(conn, "UPDATE artists SET name = ? WHERE id = ?",
-//				name, String.valueOf(id));
-//		} finally {
-//			conn.unlock();
-//		}
-//	}
+	@Override
+	protected Iterable<? extends AbstractTableMerger> getMergers()
+	{
+		ArrayList<AbstractTableMerger> mergers = new ArrayList<AbstractTableMerger>(3);
+		mergers.add(new ArtistDAO.TableMerger());
+		mergers.add(new AlbumDAO.TableMerger());
+		mergers.add(new SongDAO.TableMerger());
+		return mergers;
+	}
 }

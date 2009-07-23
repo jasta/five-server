@@ -5,6 +5,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
+import org.devtcg.five.content.AbstractTableMerger;
+import org.devtcg.five.content.Cursor;
+import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -14,8 +17,6 @@ import org.devtcg.five.util.TimeUtils;
 public class ArtistDAO extends AbstractDAO
 {
 	private static final String TABLE = "artists";
-
-	private InsertHelper mInserter;
 
 	public interface Columns extends BaseColumns
 	{
@@ -38,11 +39,18 @@ public class ArtistDAO extends AbstractDAO
 	}
 
 	@Override
+	protected String getTable()
+	{
+		return TABLE;
+	}
+
+	@Override
 	public void createTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
 			Columns._ID + " INTEGER IDENTITY, " +
 			Columns._SYNC_TIME + " INTEGER, " +
+			Columns._SYNC_ID + " VARCHAR, " +
 			Columns.MBID + " CHAR(36), " +
 			Columns.NAME + " VARCHAR NOT NULL, " +
 			Columns.NAME_MATCH + " VARCHAR NOT NULL, " +
@@ -76,21 +84,17 @@ public class ArtistDAO extends AbstractDAO
 
 	public long insert(String name) throws SQLException
 	{
-		synchronized (this) {
-			if (mInserter == null)
-			{
-				mInserter = new InsertHelper(mProvider.getConnection(),
-					"INSERT INTO " + TABLE + "(" +
-						Columns._SYNC_TIME + ", " +
-						Columns.NAME + ", " +
-						Columns.NAME_MATCH + ", " +
-						Columns.DISCOVERY_DATE + ") " +
-					"VALUES (?, ?, ?, ?)");
-			}
-		}
+		InsertHelper helper = getInsertHelper();
+
+		helper.prepareForInsert();
 
 		long now = TimeUtils.getUnixTimestamp();
-		return mInserter.insert(now, name, StringUtils.getNameMatch(name), now);
+		helper.bind(Columns._SYNC_TIME, now);
+		helper.bind(Columns.NAME, name);
+		helper.bind(Columns.NAME_MATCH, StringUtils.getNameMatch(name));
+		helper.bind(Columns.DISCOVERY_DATE, now);
+
+		return helper.insert();
 	}
 
 	public class Artist
@@ -111,17 +115,70 @@ public class ArtistDAO extends AbstractDAO
 			for (int i = 1; i <= n; i++)
 			{
 				String columnName = meta.getColumnName(i);
-				if (columnName.equals(Columns._ID))
+				if (columnName.equalsIgnoreCase(Columns._ID))
 					_id = set.getLong(i);
-				else if (columnName.equals(Columns.MBID))
+				else if (columnName.equalsIgnoreCase(Columns.MBID))
 					mbid = set.getString(i);
-				else if (columnName.equals(Columns.NAME))
+				else if (columnName.equalsIgnoreCase(Columns.NAME))
 					name = set.getString(i);
-				else if (columnName.equals(Columns.NAME_MATCH))
+				else if (columnName.equalsIgnoreCase(Columns.NAME_MATCH))
 					nameMatch = set.getString(i);
-				else if (columnName.equals(Columns.DISCOVERY_DATE))
+				else if (columnName.equalsIgnoreCase(Columns.DISCOVERY_DATE))
 					discoveryDate = set.getLong(i);
 			}
+		}
+	}
+
+	public static class TableMerger extends AbstractTableMerger
+	{
+		public TableMerger()
+		{
+			super(TABLE);
+		}
+
+		@Override
+		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
+		{
+		}
+
+		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
+			throws SQLException
+		{
+			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
+
+			if (id == null)
+				helper.prepareForInsert();
+			else
+			{
+				helper.prepareForReplace();
+				helper.bind(Columns._ID, id);
+			}
+
+			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.NAME, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.NAME_MATCH, diffsCursor, helper);
+			DatabaseUtils.cursorStringToHelper(Columns.DISCOVERY_DATE, diffsCursor, helper);
+
+			if (id == null)
+				return helper.insert();
+			else
+			{
+				helper.execute();
+				return id;
+			}
+		}
+
+		@Override
+		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
+		{
+			return insertOrUpdateRow(main, null, diffsCursor);
+		}
+
+		@Override
+		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
+		{
+			insertOrUpdateRow(main, id, diffsCursor);
 		}
 	}
 }
