@@ -24,7 +24,6 @@ import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
 import org.devtcg.five.util.FileUtils;
-import org.devtcg.five.util.TimeUtils;
 
 public class SongDAO extends AbstractDAO
 {
@@ -82,14 +81,14 @@ public class SongDAO extends AbstractDAO
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
 			Columns._ID + " INTEGER IDENTITY, " +
-			Columns._SYNC_TIME + " INTEGER, " +
+			Columns._SYNC_TIME + " BIGINT, " +
 			Columns._SYNC_ID + " VARCHAR, " +
 			Columns.MBID + " CHAR(36), " +
 			Columns.FILENAME + " VARCHAR NOT NULL, " +
 			Columns.MIME_TYPE + " VARCHAR, " +
-			Columns.MTIME + " INTEGER NOT NULL, " +
+			Columns.MTIME + " BIGINT NOT NULL, " +
 			Columns.BITRATE + " INTEGER, " +
-			Columns.FILESIZE + " INTEGER NOT NULL, " +
+			Columns.FILESIZE + " BIGINT NOT NULL, " +
 			Columns.LENGTH + " INTEGER, " +
 			Columns.TITLE + " VARCHAR NOT NULL, " +
 			Columns.TRACK + " INTEGER, " +
@@ -162,7 +161,7 @@ public class SongDAO extends AbstractDAO
 		InsertHelper helper = getInsertHelper();
 
 		helper.prepareForInsert();
-		helper.bind(Columns._SYNC_TIME, TimeUtils.getUnixTimestamp());
+		helper.bind(Columns._SYNC_TIME, System.currentTimeMillis());
 		helper.bind(Columns._SYNC_ID, existingId);
 		copySongToInsertHelper(helper, song);
 		return helper.insert();
@@ -174,7 +173,7 @@ public class SongDAO extends AbstractDAO
 
 		helper.prepareForReplace();
 		helper.bind(Columns._ID, _id);
-		helper.bind(Columns._SYNC_TIME, TimeUtils.getUnixTimestamp());
+		helper.bind(Columns._SYNC_TIME, System.currentTimeMillis());
 		copySongToInsertHelper(helper, song);
 		helper.execute();
 
@@ -186,7 +185,7 @@ public class SongDAO extends AbstractDAO
 	{
 		Song song = new Song();
 
-		song.mtime = TimeUtils.asUnixTimestamp(file.lastModified());
+		song.mtime = file.lastModified();
 		song.filename = file.getAbsolutePath();
 		song.mark = false;
 		song.filesize = file.length();

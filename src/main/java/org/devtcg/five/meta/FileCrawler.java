@@ -27,7 +27,6 @@ import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.util.CancelableThread;
 import org.devtcg.five.util.FileUtils;
 import org.devtcg.five.util.StringUtils;
-import org.devtcg.five.util.TimeUtils;
 
 import entagged.audioformats.AudioFile;
 import entagged.audioformats.AudioFileIO;
@@ -227,7 +226,7 @@ public class FileCrawler
 
 			/* Typical case; no data needs to be updated. */
 			if (existingEntry != null &&
-				existingEntry.mtime == TimeUtils.asUnixTimestamp(file.lastModified()))
+				existingEntry.mtime == file.lastModified())
 			{
 				existingEntry.unmark();
 				return existingEntry._id;

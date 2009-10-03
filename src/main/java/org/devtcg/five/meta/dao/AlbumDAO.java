@@ -23,7 +23,6 @@ import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
 import org.devtcg.five.util.StringUtils;
-import org.devtcg.five.util.TimeUtils;
 
 public class AlbumDAO extends AbstractDAO
 {
@@ -62,13 +61,13 @@ public class AlbumDAO extends AbstractDAO
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
 			Columns._ID + " INTEGER IDENTITY, " +
-			Columns._SYNC_TIME + " INTEGER, " +
+			Columns._SYNC_TIME + " BIGINT, " +
 			Columns._SYNC_ID + " VARCHAR, " +
 			Columns.MBID + " CHAR(36), " +
 			Columns.NAME + " VARCHAR NOT NULL, " +
 			Columns.NAME_MATCH + " VARCHAR NOT NULL, " +
-			Columns.DISCOVERY_DATE + " INTEGER, " +
-			Columns.RELEASE_DATE + " INTEGER, " +
+			Columns.DISCOVERY_DATE + " BIGINT, " +
+			Columns.RELEASE_DATE + " BIGINT, " +
 			"UNIQUE ("  + Columns.NAME_MATCH + ") " +
 		")");
 	}
@@ -102,7 +101,7 @@ public class AlbumDAO extends AbstractDAO
 
 		helper.prepareForInsert();
 
-		long now = TimeUtils.getUnixTimestamp();
+		long now = System.currentTimeMillis();
 		helper.bind(Columns._SYNC_TIME, now);
 		helper.bind(Columns.NAME, name);
 		helper.bind(Columns.NAME_MATCH, StringUtils.getNameMatch(name));
