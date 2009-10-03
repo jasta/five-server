@@ -16,14 +16,14 @@ package org.devtcg.five.meta;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
 
-import org.devtcg.five.content.AbstractTableMerger;
+import org.devtcg.five.content.SyncAdapter;
 import org.devtcg.five.meta.dao.AlbumDAO;
 import org.devtcg.five.meta.dao.ArtistDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.persistence.DatabaseOpenHelper;
 import org.devtcg.five.persistence.LockableConnection;
+import org.devtcg.five.persistence.Provider;
 import org.devtcg.five.persistence.SyncableProvider;
 
 public class MetaProvider extends SyncableProvider
@@ -146,13 +146,19 @@ public class MetaProvider extends SyncableProvider
 		return mHelper.getConnection();
 	}
 
+//	@Override
+//	protected Iterable<? extends AbstractTableMerger> getMergers()
+//	{
+//		ArrayList<AbstractTableMerger> mergers = new ArrayList<AbstractTableMerger>(3);
+//		mergers.add(getArtistDAO().new TableMerger());
+//		mergers.add(getAlbumDAO().new TableMerger());
+//		mergers.add(getSongDAO().new TableMerger());
+//		return mergers;
+//	}
+
 	@Override
-	protected Iterable<? extends AbstractTableMerger> getMergers()
+	public SyncAdapter<? extends SyncableProvider> getSyncAdapter()
 	{
-		ArrayList<AbstractTableMerger> mergers = new ArrayList<AbstractTableMerger>(3);
-		mergers.add(new ArtistDAO.TableMerger());
-		mergers.add(new AlbumDAO.TableMerger());
-		mergers.add(new SongDAO.TableMerger());
-		return mergers;
+		return new MetaSyncAdapter(this);
 	}
 }

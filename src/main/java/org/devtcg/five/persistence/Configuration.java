@@ -35,7 +35,7 @@ public class Configuration
 	private static final String USER_HOME = System.getProperty("user.home") +
 		File.separator + ".five";
 
-	private static final int DEFAULT_PORT = 5545;
+	private static final int DEFAULT_PORT = 5546;
 
 	private static final String DB_NAME = "prefs";
 	private static final int DB_VERSION = 1;
@@ -119,7 +119,7 @@ public class Configuration
 		DatabaseUtils.execute(conn, "UPDATE configuration SET " +
 				Columns.FIRST_TIME + " = ?, " +
 				Columns.LIBRARY_PATH + " = ?",
-			"0", "/music/A:/music/B");
+			"0", "/music/A");
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException

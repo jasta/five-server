@@ -14,17 +14,20 @@
 
 package org.devtcg.five.meta.dao;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 import org.devtcg.five.content.AbstractTableMerger;
-import org.devtcg.five.content.Cursor;
-import org.devtcg.five.meta.MetaProvider;
+import org.devtcg.five.content.ColumnsMap;
+import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
+import org.devtcg.five.persistence.SyncableProvider;
 import org.devtcg.five.util.StringUtils;
 import org.devtcg.five.util.TimeUtils;
 
@@ -79,21 +82,13 @@ public class ArtistDAO extends AbstractDAO
 		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
 	}
 
-	public Artist getArtist(String name) throws SQLException
+	public ArtistEntryDAO getArtist(String name) throws SQLException
 	{
 		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
 			"SELECT * FROM " + TABLE + " WHERE " + Columns.NAME_MATCH + " = ?",
 			name);
 
-		try {
-			if (set.next() == false)
-				return null;
-
-			return new Artist(set);
-		} finally {
-			if (set != null)
-				set.close();
-		}
+		return ArtistEntryDAO.newInstance(set);
 	}
 
 	public long insert(String name) throws SQLException
@@ -120,79 +115,153 @@ public class ArtistDAO extends AbstractDAO
 		public long discoveryDate;
 
 		private Artist() {}
+	}
 
-		private Artist(ResultSet set) throws SQLException
+	public static class ArtistEntryDAO extends AbstractSyncableEntryDAO
+	{
+		private final int mColumnId;
+		private final int mColumnMbid;
+		private final int mColumnName;
+		private final int mColumnNameMatch;
+		private final int mColumnDiscoveryDate;
+
+		private static final Creator<ArtistEntryDAO> CREATOR = new Creator<ArtistEntryDAO>()
 		{
-			ResultSetMetaData meta = set.getMetaData();
-			int n = meta.getColumnCount();
-
-			for (int i = 1; i <= n; i++)
+			@Override
+			public ArtistEntryDAO init(ResultSet set) throws SQLException
 			{
-				String columnName = meta.getColumnName(i);
-				if (columnName.equalsIgnoreCase(Columns._ID))
-					_id = set.getLong(i);
-				else if (columnName.equalsIgnoreCase(Columns.MBID))
-					mbid = set.getString(i);
-				else if (columnName.equalsIgnoreCase(Columns.NAME))
-					name = set.getString(i);
-				else if (columnName.equalsIgnoreCase(Columns.NAME_MATCH))
-					nameMatch = set.getString(i);
-				else if (columnName.equalsIgnoreCase(Columns.DISCOVERY_DATE))
-					discoveryDate = set.getLong(i);
+				return new ArtistEntryDAO(set);
+			}
+		};
+
+		public static ArtistEntryDAO newInstance(ResultSet set) throws SQLException
+		{
+			return CREATOR.newInstance(set);
+		}
+
+		private ArtistEntryDAO(SyncableProvider provider) throws SQLException
+		{
+			this(getResultSet(provider, TABLE));
+		}
+
+		private ArtistEntryDAO(ResultSet set) throws SQLException
+		{
+			super(set);
+
+			ColumnsMap map = ColumnsMap.fromResultSet(set);
+
+			mColumnId = map.getColumnIndex(Columns._ID);
+			mColumnMbid = map.getColumnIndex(Columns.MBID);
+			mColumnName = map.getColumnIndex(Columns.NAME);
+			mColumnNameMatch = map.getColumnIndex(Columns.NAME_MATCH);
+			mColumnDiscoveryDate = map.getColumnIndex(Columns.DISCOVERY_DATE);
+		}
+
+		public long getId() throws SQLException
+		{
+			return mSet.getLong(mColumnId);
+		}
+
+		public String getMbid() throws SQLException
+		{
+			return mSet.getString(mColumnMbid);
+		}
+
+		public String getName() throws SQLException
+		{
+			return mSet.getString(mColumnName);
+		}
+
+		public String getNameMatch() throws SQLException
+		{
+			return mSet.getString(mColumnNameMatch);
+		}
+
+		public String getContentType()
+		{
+			return "whatever/artist";
+		}
+
+		public void writeRecordTo(OutputStream out) throws IOException, SQLException
+		{
+			out.write(toString().getBytes());
+			out.write('\n');
+		}
+
+		public String toString()
+		{
+			try {
+				return "{id=" + getId() + ", name=" + getName() + ", name_match=" + getNameMatch() + "}";
+			} catch (SQLException e) {
+				return super.toString();
 			}
 		}
 	}
 
-	public static class TableMerger extends AbstractTableMerger
+	public class TableMerger extends AbstractTableMerger
 	{
 		public TableMerger()
 		{
-			super(TABLE);
+			super((SyncableProvider)getProvider(), TABLE);
 		}
 
 		@Override
-		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
+		public SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs) throws SQLException
 		{
-		}
-
-		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
-			throws SQLException
-		{
-			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
-
-			if (id == null)
-				helper.prepareForInsert();
-			else
-			{
-				helper.prepareForReplace();
-				helper.bind(Columns._ID, id);
-			}
-
-			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.NAME, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.NAME_MATCH, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.DISCOVERY_DATE, diffsCursor, helper);
-
-			if (id == null)
-				return helper.insert();
-			else
-			{
-				helper.execute();
-				return id;
-			}
-		}
-
-		@Override
-		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
-		{
-			return insertOrUpdateRow(main, null, diffsCursor);
-		}
-
-		@Override
-		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
-		{
-			insertOrUpdateRow(main, id, diffsCursor);
+			return new ArtistEntryDAO(clientDiffs);
 		}
 	}
+
+//	public class TableMerger extends AbstractTableMerger
+//	{
+//		public TableMerger()
+//		{
+//			super((SyncableProvider)getProvider(), TABLE);
+//		}
+//
+//		@Override
+//		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
+//		{
+//		}
+//
+//		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
+//			throws SQLException
+//		{
+//			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
+//
+//			if (id == null)
+//				helper.prepareForInsert();
+//			else
+//			{
+//				helper.prepareForReplace();
+//				helper.bind(Columns._ID, id);
+//			}
+//
+//			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.NAME, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.NAME_MATCH, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.DISCOVERY_DATE, diffsCursor, helper);
+//
+//			if (id == null)
+//				return helper.insert();
+//			else
+//			{
+//				helper.execute();
+//				return id;
+//			}
+//		}
+//
+//		@Override
+//		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
+//		{
+//			return insertOrUpdateRow(main, null, diffsCursor);
+//		}
+//
+//		@Override
+//		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
+//		{
+//			insertOrUpdateRow(main, id, diffsCursor);
+//		}
+//	}
 }

@@ -64,6 +64,15 @@ public class ColumnsMap
 	public int getColumnIndex(String name)
 	{
 		Integer index = mColumns.get(name);
+		if (index != null)
+			return index;
+
+		return -1;
+	}
+
+	public int getColumnIndexOrThrow(String name)
+	{
+		Integer index = mColumns.get(name);
 		if (index == null)
 			throw new IllegalArgumentException("Column " + name + " was not found.");
 

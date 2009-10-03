@@ -21,7 +21,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.devtcg.five.content.Cursor;
-import org.devtcg.five.meta.dao.ArtistDAO.Columns;
 
 public class DatabaseUtils {
 	public static Connection getNewConnection(String dbName) throws SQLException

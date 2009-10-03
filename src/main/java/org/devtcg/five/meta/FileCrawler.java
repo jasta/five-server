@@ -83,9 +83,7 @@ public class FileCrawler
 	{
 		if (mThread == null)
 		{
-			mThread = new CrawlerThread(MetaProvider.getTemporaryInstance());
-			mThread.setName("FileCrawler");
-			mThread.setPriority(Thread.MIN_PRIORITY);
+			mThread = new CrawlerThread(MetaProvider.getInstance());
 			mThread.start();
 		}
 	}
@@ -108,15 +106,16 @@ public class FileCrawler
 
 	private class CrawlerThread extends CancelableThread
 	{
-		private MetaProvider mTempProvider;
-		private MetaProvider mMainProvider;
+		private final MetaProvider mProvider;
 
 		private int mFilesScanned = 0;
 
-		public CrawlerThread(MetaProvider tempProvider)
+		public CrawlerThread(MetaProvider provider)
 		{
-			mTempProvider = tempProvider;
-			mMainProvider = MetaProvider.getInstance();
+			setName("FileCrawler");
+			setPriority(Thread.MIN_PRIORITY);
+
+			mProvider = provider;
 		}
 
 		private boolean isPlaylist(File file, String ext)
@@ -142,17 +141,17 @@ public class FileCrawler
 			if (ext.equalsIgnoreCase("mp3") == true)
 				return true;
 
-			if (ext.equalsIgnoreCase("ogg") == true)
-				return true;
-
-			if (ext.equalsIgnoreCase("wma") == true)
-				return true;
-
-			if (ext.equalsIgnoreCase("flac") == true)
-				return true;
-
-			if (ext.equalsIgnoreCase("m4a") == true)
-				return true;
+//			if (ext.equalsIgnoreCase("ogg") == true)
+//				return true;
+//
+//			if (ext.equalsIgnoreCase("wma") == true)
+//				return true;
+//
+//			if (ext.equalsIgnoreCase("flac") == true)
+//				return true;
+//
+//			if (ext.equalsIgnoreCase("m4a") == true)
+//				return true;
 
 			return false;
 		}
@@ -195,17 +194,17 @@ public class FileCrawler
 		{
 			String nameMatch = StringUtils.getNameMatch(artist);
 
-			ArtistDAO.Artist artistEntry =
-				mTempProvider.getArtistDAO().getArtist(nameMatch);
+			ArtistDAO.ArtistEntryDAO artistEntry =
+				mProvider.getArtistDAO().getArtist(nameMatch);
 
 			if (artistEntry == null)
-			{
-				artistEntry = mMainProvider.getArtistDAO().getArtist(nameMatch);
-				if (artistEntry == null)
-					return mTempProvider.getArtistDAO().insert(artist);
-			}
+				return mProvider.getArtistDAO().insert(artist);
 
-			return artistEntry._id;
+			try {
+				return artistEntry.getId();
+			} finally {
+				artistEntry.close();
+			}
 		}
 
 		private long getAlbumId(String album) throws SQLException
@@ -213,14 +212,10 @@ public class FileCrawler
 			String nameMatch = StringUtils.getNameMatch(album);
 
 			AlbumDAO.Album albumEntry =
-				mTempProvider.getAlbumDAO().getAlbum(nameMatch);
+				mProvider.getAlbumDAO().getAlbum(nameMatch);
 
 			if (albumEntry == null)
-			{
-				albumEntry = mMainProvider.getAlbumDAO().getAlbum(nameMatch);
-				if (albumEntry == null)
-					return mTempProvider.getAlbumDAO().insert(album);
-			}
+				return mProvider.getAlbumDAO().insert(album);
 
 			return albumEntry._id;
 		}
@@ -228,7 +223,7 @@ public class FileCrawler
 		private long handleFileSong(File file) throws SQLException
 		{
 			SongDAO.Song existingEntry =
-				mMainProvider.getSongDAO().getSong(file.getAbsolutePath());
+				mProvider.getSongDAO().getSong(file.getAbsolutePath());
 
 			/* Typical case; no data needs to be updated. */
 			if (existingEntry != null &&
@@ -261,17 +256,19 @@ public class FileCrawler
 				long artistId = getArtistId(artist);
 				long albumId = getAlbumId(album);
 
-				SongDAO.Song song = mTempProvider.getSongDAO().newSong(file,
+				SongDAO.Song song = mProvider.getSongDAO().newSong(file,
 					artistId, albumId, title, bitrate, length, track);
 
-				mTempProvider.getSongDAO().insertDiff(song,
-					existingEntry != null ? String.valueOf(existingEntry._id) : null);
+				if (existingEntry != null)
+					return mProvider.getSongDAO().update(existingEntry._id, song);
+				else
+					return mProvider.getSongDAO().insert(song);
 			} catch (CannotReadException e) {
 				if (LOG.isWarnEnabled())
 					LOG.warn(file + ": unable to parse song: " + e);
-			}
 
-			return -1;
+				return -1;
+			}
 		}
 
 		private boolean handleFile(File file) throws SQLException
@@ -320,23 +317,13 @@ public class FileCrawler
 
 		private void crawlImpl() throws SQLException
 		{
-			mMainProvider.getSongDAO().markAll();
+			mProvider.getSongDAO().markAll();
 
 			for (String path : mPaths)
 				traverse(new File(path));
 
-			if (hasCanceled() == true)
-			{
-				/* We should probably unmarkAll on the main provider, but we
-				 * currently don't have to. */
-				return;
-			}
-
 			/* Delete every entry that hasn't been unmarked during traversal. */
 			deleteAllMarked();
-
-			/* Merge all updated records into the main provider. */
-			mMainProvider.merge(mTempProvider);
 		}
 
 		public void run()
@@ -350,9 +337,6 @@ public class FileCrawler
 				/* TODO */
 				e.printStackTrace();
 			} finally {
-				try {
-					mTempProvider.close();
-				} catch (SQLException e) {}
 				synchronized (FileCrawler.this) {
 					mThread = null;
 				}

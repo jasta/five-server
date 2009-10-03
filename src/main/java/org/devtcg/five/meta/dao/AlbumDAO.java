@@ -19,9 +19,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
-import org.devtcg.five.content.AbstractTableMerger;
-import org.devtcg.five.content.Cursor;
-import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -149,57 +146,57 @@ public class AlbumDAO extends AbstractDAO
 		}
 	}
 
-	public static class TableMerger extends AbstractTableMerger
-	{
-		public TableMerger()
-		{
-			super(TABLE);
-		}
-
-		@Override
-		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
-		{
-		}
-
-		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
-			throws SQLException
-		{
-			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
-
-			if (id == null)
-				helper.prepareForInsert();
-			else
-			{
-				helper.prepareForReplace();
-				helper.bind(Columns._ID, id);
-			}
-
-			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.NAME, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.NAME_MATCH, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.DISCOVERY_DATE, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.RELEASE_DATE, diffsCursor, helper);
-
-			if (id == null)
-				return helper.insert();
-			else
-			{
-				helper.execute();
-				return id;
-			}
-		}
-
-		@Override
-		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
-		{
-			return insertOrUpdateRow(main, null, diffsCursor);
-		}
-
-		@Override
-		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
-		{
-			insertOrUpdateRow(main, id, diffsCursor);
-		}
-	}
+//	public class TableMerger extends AbstractTableMerger
+//	{
+//		public TableMerger()
+//		{
+//			super((SyncableProvider)getProvider(), TABLE);
+//		}
+//
+//		@Override
+//		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
+//		{
+//		}
+//
+//		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
+//			throws SQLException
+//		{
+//			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
+//
+//			if (id == null)
+//				helper.prepareForInsert();
+//			else
+//			{
+//				helper.prepareForReplace();
+//				helper.bind(Columns._ID, id);
+//			}
+//
+//			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.NAME, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.NAME_MATCH, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.DISCOVERY_DATE, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.RELEASE_DATE, diffsCursor, helper);
+//
+//			if (id == null)
+//				return helper.insert();
+//			else
+//			{
+//				helper.execute();
+//				return id;
+//			}
+//		}
+//
+//		@Override
+//		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
+//		{
+//			return insertOrUpdateRow(main, null, diffsCursor);
+//		}
+//
+//		@Override
+//		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
+//		{
+//			insertOrUpdateRow(main, id, diffsCursor);
+//		}
+//	}
 }

@@ -20,9 +20,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
-import org.devtcg.five.content.AbstractTableMerger;
-import org.devtcg.five.content.Cursor;
-import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -125,7 +122,7 @@ public class SongDAO extends AbstractDAO
 	public Song getSong(String filename) throws SQLException
 	{
 		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
-			"SELECT * FROM " + TABLE + " WHERE " + Columns.MARK + " = ? LIMIT 1", filename);
+			"SELECT * FROM " + TABLE + " WHERE " + Columns.FILENAME + " = ? LIMIT 1", filename);
 
 		try {
 			if (set.next() == false)
@@ -250,65 +247,65 @@ public class SongDAO extends AbstractDAO
 		}
 	}
 
-	public static class TableMerger extends AbstractTableMerger
-	{
-		public TableMerger()
-		{
-			super(TABLE);
-		}
-
-		@Override
-		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
-		{
-		}
-
-		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
-			throws SQLException
-		{
-			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
-
-			if (id == null)
-				helper.prepareForInsert();
-			else
-			{
-				helper.prepareForReplace();
-				helper.bind(Columns._ID, id);
-			}
-
-			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.MBID, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.FILENAME, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.MIME_TYPE, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.MTIME, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.BITRATE, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.FILESIZE, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.LENGTH, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.TITLE, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.TRACK, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.ARTIST_ID, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.ALBUM_ID, diffsCursor, helper);
-			DatabaseUtils.cursorStringToHelper(Columns.MARK, diffsCursor, helper);
-
-			if (id == null)
-				return helper.insert();
-			else
-			{
-				helper.execute();
-				return id;
-			}
-		}
-
-		@Override
-		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
-		{
-			return insertOrUpdateRow(main, null, diffsCursor);
-		}
-
-		@Override
-		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
-		{
-			insertOrUpdateRow(main, id, diffsCursor);
-		}
-	}
+//	public class TableMerger extends AbstractTableMerger
+//	{
+//		public TableMerger()
+//		{
+//			super((SyncableProvider)getProvider(), TABLE);
+//		}
+//
+//		@Override
+//		public void deleteRow(Provider main, Cursor diffsCursor) throws SQLException
+//		{
+//		}
+//
+//		private long insertOrUpdateRow(Provider main, Long id, Cursor diffsCursor)
+//			throws SQLException
+//		{
+//			InsertHelper helper = ((MetaProvider)main).getArtistDAO().getInsertHelper();
+//
+//			if (id == null)
+//				helper.prepareForInsert();
+//			else
+//			{
+//				helper.prepareForReplace();
+//				helper.bind(Columns._ID, id);
+//			}
+//
+//			DatabaseUtils.cursorStringToHelper(Columns._SYNC_TIME, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns._SYNC_ID, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.MBID, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.FILENAME, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.MIME_TYPE, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.MTIME, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.BITRATE, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.FILESIZE, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.LENGTH, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.TITLE, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.TRACK, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.ARTIST_ID, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.ALBUM_ID, diffsCursor, helper);
+//			DatabaseUtils.cursorStringToHelper(Columns.MARK, diffsCursor, helper);
+//
+//			if (id == null)
+//				return helper.insert();
+//			else
+//			{
+//				helper.execute();
+//				return id;
+//			}
+//		}
+//
+//		@Override
+//		public long insertRow(Provider main, Cursor diffsCursor) throws SQLException
+//		{
+//			return insertOrUpdateRow(main, null, diffsCursor);
+//		}
+//
+//		@Override
+//		public void updateRow(Provider main, long id, Cursor diffsCursor) throws SQLException
+//		{
+//			insertOrUpdateRow(main, id, diffsCursor);
+//		}
+//	}
 }

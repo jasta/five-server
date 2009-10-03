@@ -14,6 +14,7 @@
 
 package org.devtcg.five;
 
+import java.io.IOException;
 import java.sql.SQLException;
 
 import org.apache.commons.logging.Log;
@@ -66,8 +67,13 @@ public class Main {
 
 		int port = config.getServerPort();
 
-		mServer = new HttpServer(port);
-		mServer.start();
+		try {
+			mServer = new HttpServer(port);
+			mServer.start();
+		} catch (IOException e) {
+			/* TODO */
+			throw new RuntimeException(e);
+		}
 
 		mCrawler = FileCrawler.getInstance();
 		mCrawler.setListener(mCrawlerListener);
