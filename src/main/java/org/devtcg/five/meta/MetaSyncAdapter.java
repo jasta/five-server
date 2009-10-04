@@ -24,8 +24,15 @@ public class MetaSyncAdapter extends SyncAdapter<MetaProvider>
 		super(provider);
 	}
 
-	public AbstractTableMerger getArtistMerger()
+	public AbstractTableMerger getMerger(String name)
 	{
-		return mProvider.getArtistDAO().new TableMerger();
+		if (name.equals("artists"))
+			return mProvider.getArtistDAO().new TableMerger();
+		else if (name.equals("albums"))
+			return mProvider.getAlbumDAO().new TableMerger();
+		else if (name.equals("songs"))
+			return mProvider.getSongDAO().new TableMerger();
+
+		return null;
 	}
 }

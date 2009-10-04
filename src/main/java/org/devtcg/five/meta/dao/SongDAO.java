@@ -15,14 +15,24 @@
 package org.devtcg.five.meta.dao;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
+import org.devtcg.five.content.AbstractTableMerger;
+import org.devtcg.five.content.ColumnsMap;
+import org.devtcg.five.content.SyncableEntryDAO;
+import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO;
+import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO.Creator;
+import org.devtcg.five.meta.dao.AlbumDAO.AlbumEntryDAO;
+import org.devtcg.five.meta.dao.AlbumDAO.Columns;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
+import org.devtcg.five.persistence.SyncableProvider;
 import org.devtcg.five.util.FileUtils;
 
 public class SongDAO extends AbstractDAO
@@ -118,20 +128,12 @@ public class SongDAO extends AbstractDAO
 			"WHERE " + Columns._ID + " = ?", String.valueOf(_id));
 	}
 
-	public Song getSong(String filename) throws SQLException
+	public SongEntryDAO getSong(String filename) throws SQLException
 	{
 		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
 			"SELECT * FROM " + TABLE + " WHERE " + Columns.FILENAME + " = ? LIMIT 1", filename);
 
-		try {
-			if (set.next() == false)
-				return null;
-
-			return new Song(set);
-		} finally {
-			if (set != null)
-				set.close();
-		}
+		return SongEntryDAO.newInstance(set);
 	}
 
 	private static void copySongToInsertHelper(InsertHelper helper, Song song)
@@ -201,7 +203,7 @@ public class SongDAO extends AbstractDAO
 		return song;
 	}
 
-	public class Song
+	public static class Song
 	{
 		public long _id;
 		public String mbid;
@@ -218,31 +220,126 @@ public class SongDAO extends AbstractDAO
 		public boolean mark;
 
 		private Song() {}
+	}
 
-		private Song(ResultSet set) throws SQLException
+	public static class SongEntryDAO extends AbstractSyncableEntryDAO
+	{
+		private final int mColumnId;
+		private final int mColumnArtistId;
+		private final int mColumnAlbumId;
+		private final int mColumnMbid;
+		private final int mColumnFilename;
+		private final int mColumnTitle;
+		private final int mColumnMtime;
+		private final int mColumnBitrate;
+
+		private static final Creator<SongEntryDAO> CREATOR = new Creator<SongEntryDAO>()
 		{
-			ResultSetMetaData meta = set.getMetaData();
-			int n = meta.getColumnCount();
-
-			for (int i = 1; i <= n; i++)
+			@Override
+			public SongEntryDAO init(ResultSet set) throws SQLException
 			{
-				String columnName = meta.getColumnName(i);
-				if (columnName.equalsIgnoreCase(Columns._ID))
-					_id = set.getLong(i);
-				else if (columnName.equalsIgnoreCase(Columns.MBID))
-					mbid = set.getString(i);
-				else if (columnName.equalsIgnoreCase(Columns.FILENAME))
-					filename = set.getString(i);
-				else if (columnName.equalsIgnoreCase(Columns.TITLE))
-					title = set.getString(i);
-				else if (columnName.equalsIgnoreCase(Columns.MTIME))
-					mtime = set.getLong(i);
+				return new SongEntryDAO(set);
 			}
+		};
+
+		public static SongEntryDAO newInstance(ResultSet set) throws SQLException
+		{
+			return CREATOR.newInstance(set);
 		}
 
-		public void unmark() throws SQLException
+		private SongEntryDAO(SyncableProvider provider) throws SQLException
 		{
-			SongDAO.this.unmark(_id);
+			this(getResultSet(provider, TABLE));
+		}
+
+		private SongEntryDAO(ResultSet set) throws SQLException
+		{
+			super(set);
+
+			ColumnsMap map = ColumnsMap.fromResultSet(set);
+
+			mColumnId = map.getColumnIndex(Columns._ID);
+			mColumnArtistId = map.getColumnIndex(Columns.ARTIST_ID);
+			mColumnAlbumId = map.getColumnIndex(Columns.ALBUM_ID);
+			mColumnMbid = map.getColumnIndex(Columns.MBID);
+			mColumnFilename = map.getColumnIndex(Columns.FILENAME);
+			mColumnTitle = map.getColumnIndex(Columns.TITLE);
+			mColumnMtime = map.getColumnIndex(Columns.MTIME);
+			mColumnBitrate = map.getColumnIndex(Columns.BITRATE);
+		}
+
+		public long getId() throws SQLException
+		{
+			return mSet.getLong(mColumnId);
+		}
+
+		public long getArtistId() throws SQLException
+		{
+			return mSet.getLong(mColumnArtistId);
+		}
+
+		public long getAlbumId() throws SQLException
+		{
+			return mSet.getLong(mColumnAlbumId);
+		}
+
+		public String getMbid() throws SQLException
+		{
+			return mSet.getString(mColumnMbid);
+		}
+
+		public String getTitle() throws SQLException
+		{
+			return mSet.getString(mColumnTitle);
+		}
+
+		public String getFilename() throws SQLException
+		{
+			return mSet.getString(mColumnFilename);
+		}
+
+		public long getMtime() throws SQLException
+		{
+			return mSet.getLong(mColumnMtime);
+		}
+
+		public int getBitrate() throws SQLException
+		{
+			return mSet.getInt(mColumnBitrate);
+		}
+
+		public String getContentType()
+		{
+			return "application/vnd.five.song";
+		}
+
+		public void writeRecordTo(OutputStream out) throws IOException, SQLException
+		{
+			out.write(toString().getBytes());
+			out.write('\n');
+		}
+
+		public String toString()
+		{
+			try {
+				return "{id=" + getId() + ", artistId=" + getArtistId() + ", albumId=" + getAlbumId() + ", filename=" + getFilename() + ", title=" + getTitle() + ", bitrate=" + getBitrate() + "}";
+			} catch (SQLException e) {
+				return super.toString();
+			}
+		}
+	}
+
+	public class TableMerger extends AbstractTableMerger
+	{
+		public TableMerger()
+		{
+			super((SyncableProvider)getProvider(), TABLE);
+		}
+
+		@Override
+		public SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs) throws SQLException
+		{
+			return new SongEntryDAO(clientDiffs);
 		}
 	}
 

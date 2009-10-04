@@ -30,7 +30,7 @@ public class MetaProvider extends SyncableProvider
 	private final DatabaseOpenHelper mHelper;
 
 	private static final String DB_NAME = "meta";
-	private static final int DB_VERSION = 7;
+	private static final int DB_VERSION = 8;
 
 	private static final MetaProvider INSTANCE = new MetaProvider(DB_NAME);
 

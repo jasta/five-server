@@ -206,37 +206,53 @@ public class FileCrawler
 			}
 		}
 
-		private long getAlbumId(String album) throws SQLException
+		private long getAlbumId(long artistId, String album) throws SQLException
 		{
 			String nameMatch = StringUtils.getNameMatch(album);
 
-			AlbumDAO.Album albumEntry =
-				mProvider.getAlbumDAO().getAlbum(nameMatch);
+			AlbumDAO.AlbumEntryDAO albumEntry =
+				mProvider.getAlbumDAO().getAlbum(artistId, nameMatch);
 
 			if (albumEntry == null)
-				return mProvider.getAlbumDAO().insert(album);
+				return mProvider.getAlbumDAO().insert(artistId, album);
 
-			return albumEntry._id;
+			try {
+				return albumEntry.getId();
+			} finally {
+				albumEntry.close();
+			}
 		}
 
 		private long handleFileSong(File file) throws SQLException
 		{
-			SongDAO.Song existingEntry =
+			SongDAO.SongEntryDAO existingEntry =
 				mProvider.getSongDAO().getSong(file.getAbsolutePath());
 
 			/* Typical case; no data needs to be updated. */
-			if (existingEntry != null &&
-				existingEntry.mtime == file.lastModified())
-			{
-				existingEntry.unmark();
-				return existingEntry._id;
+			try {
+				if (existingEntry != null &&
+					existingEntry.getMtime() == file.lastModified())
+				{
+					mProvider.getSongDAO().unmark(existingEntry.getId());
+					return existingEntry.getId();
+				}
+				else
+				{
+					/*
+					 * This file is either new or has been updated since the last time
+					 * we scanned.  Re-parse.
+					 */
+					return handleFileNewOrUpdatedSong(file, existingEntry);
+				}
+			} finally {
+				if (existingEntry != null)
+					existingEntry.close();
 			}
+		}
 
-			/*
-			 * This file is either new or has been updated since the last time
-			 * we scanned.
-			 */
-
+		private long handleFileNewOrUpdatedSong(File file, SongDAO.SongEntryDAO existingEntry)
+			throws SQLException
+		{
 			try {
 				AudioFile audioFile = AudioFileIO.read(file);
 				Tag tag = audioFile.getTag();
@@ -253,13 +269,13 @@ public class FileCrawler
 					throw new CannotReadException("No title property set");
 
 				long artistId = getArtistId(artist);
-				long albumId = getAlbumId(album);
+				long albumId = getAlbumId(artistId, album);
 
 				SongDAO.Song song = mProvider.getSongDAO().newSong(file,
 					artistId, albumId, title, bitrate, length, track);
 
 				if (existingEntry != null)
-					return mProvider.getSongDAO().update(existingEntry._id, song);
+					return mProvider.getSongDAO().update(existingEntry.getId(), song);
 				else
 					return mProvider.getSongDAO().insert(song);
 			} catch (CannotReadException e) {

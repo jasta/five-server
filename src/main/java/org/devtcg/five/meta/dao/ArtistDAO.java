@@ -104,7 +104,7 @@ public class ArtistDAO extends AbstractDAO
 		return helper.insert();
 	}
 
-	public class Artist
+	public static class Artist
 	{
 		public long _id;
 		public String mbid;
@@ -177,7 +177,7 @@ public class ArtistDAO extends AbstractDAO
 
 		public String getContentType()
 		{
-			return "application/vnd.five.artists";
+			return "application/vnd.five.artist";
 		}
 
 		public void writeRecordTo(OutputStream out) throws IOException, SQLException

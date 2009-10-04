@@ -62,8 +62,7 @@ public class HttpServer extends AbstractHttpServer
 			MetaSyncAdapter adapter = (MetaSyncAdapter)MetaProvider.getInstance().getSyncAdapter();
 			AbstractTableMerger merger = null;
 
-			if (feedType.equals("artists"))
-				merger = adapter.getArtistMerger();
+			merger = adapter.getMerger(feedType);
 
 			if (merger != null)
 			{
