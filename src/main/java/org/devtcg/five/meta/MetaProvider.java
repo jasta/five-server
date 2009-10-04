@@ -23,7 +23,6 @@ import org.devtcg.five.meta.dao.ArtistDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.persistence.DatabaseOpenHelper;
 import org.devtcg.five.persistence.LockableConnection;
-import org.devtcg.five.persistence.Provider;
 import org.devtcg.five.persistence.SyncableProvider;
 
 public class MetaProvider extends SyncableProvider

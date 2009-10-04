@@ -14,19 +14,13 @@
 
 package org.devtcg.five.content;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.devtcg.five.content.ColumnsMap;
 import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
-import org.devtcg.five.persistence.Provider;
 import org.devtcg.five.persistence.SyncableProvider;
-import org.devtcg.five.util.StringUtils;
 
 /**
  * This code and design is largely based on Android's AbstractTableMerger, so
@@ -35,8 +29,6 @@ import org.devtcg.five.util.StringUtils;
  */
 public abstract class AbstractTableMerger
 {
-	private static final Log LOG = LogFactory.getLog(AbstractTableMerger.class);
-
 	private final SyncableProvider mDb;
 	private final String mTable;
 
