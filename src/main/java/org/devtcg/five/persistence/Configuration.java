@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.devtcg.five.util.StringUtils;
 
 /**
  * Centralized access to all server preferences.
@@ -30,10 +31,13 @@ public class Configuration
 {
 	private static final Log LOG = LogFactory.getLog(Configuration.class);
 
-	private static final Configuration INSTANCE = new Configuration();
+	private static class ConfigurationHolder
+	{
+		private static final Configuration INSTANCE = new Configuration();
+	}
 
-	private static final String USER_HOME = System.getProperty("user.home") +
-		File.separator + ".five";
+	private static final File USER_HOME;
+	private static final File DATABASE_DIR;
 
 	private static final int DEFAULT_PORT = 5546;
 
@@ -41,6 +45,18 @@ public class Configuration
 	private static final int DB_VERSION = 1;
 
 	private final DatabaseOpenHelper mDatabase;
+
+	static {
+		String home = System.getProperty("user.home");
+		if (StringUtils.isEmpty(home))
+			home = System.getenv("HOME");
+
+		USER_HOME = new File(home, ".five");
+		if (USER_HOME.isDirectory() == false || USER_HOME.canWrite() == false)
+			throw new RuntimeException("Cannot access " + USER_HOME);
+
+		DATABASE_DIR = new File(USER_HOME, "databases");
+	}
 
 	private Configuration()
 	{
@@ -96,17 +112,17 @@ public class Configuration
 
 	public static Configuration getInstance()
 	{
-		return INSTANCE;
+		return ConfigurationHolder.INSTANCE;
 	}
 
 	public static String getDatabasePath(String databaseName)
 	{
-		return USER_HOME + File.separator + "databases" + File.separator + databaseName;
+		return (new File(DATABASE_DIR, databaseName)).getAbsolutePath();
 	}
 
 	public static String getStoragePath()
 	{
-		return USER_HOME;
+		return USER_HOME.getAbsolutePath();
 	}
 
 	/**
