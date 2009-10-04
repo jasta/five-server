@@ -145,6 +145,12 @@ public class MetaProvider extends SyncableProvider
 		return mHelper.getConnection();
 	}
 
+	@Override
+	public void close() throws SQLException
+	{
+		mHelper.close();
+	}
+
 //	@Override
 //	protected Iterable<? extends AbstractTableMerger> getMergers()
 //	{

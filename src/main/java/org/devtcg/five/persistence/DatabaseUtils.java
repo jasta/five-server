@@ -23,12 +23,6 @@ import java.sql.SQLException;
 import org.devtcg.five.content.Cursor;
 
 public class DatabaseUtils {
-	public static Connection getNewConnection(String dbName) throws SQLException
-	{
-		return DriverManager.getConnection("jdbc:hsqldb:file:" +
-				Configuration.getDatabasePath(dbName));
-	}
-
 	private static PreparedStatement createPreparedStatement(Connection conn,
 		String sql, String[] args) throws SQLException
 	{

@@ -37,6 +37,7 @@ public abstract class DatabaseOpenHelper
 	}
 
 	private final String mName;
+	private final String mUri;
 	private final int mVersion;
 
 	private LockableConnection mConnection;
@@ -55,6 +56,31 @@ public abstract class DatabaseOpenHelper
 
 		mName = name;
 		mVersion = version;
+		mUri = makeDatabaseUri(name);
+	}
+
+	private static String makeDatabaseUri(String name)
+	{
+		if (name != null)
+			return "file:" + Configuration.getDatabasePath(name);
+		else
+		{
+			/**
+			 * System.currentTimeMillis() is used to work around particularly
+			 * stupid behaviour in HSQLDB where memory databases are tracked
+			 * within the engine and returned to the caller by name.
+			 *
+			 * We need semantics that allow us to reliably create a new
+			 * in-memory database instance on demand, not potentially re-use an
+			 * existing one we have open.
+			 *
+			 * There is little chance of contention in using
+			 * System.currentTimeMillis() based on our design, but in the future
+			 * we may need to look at a properly synchronized approach to ensure
+			 * we never pass the same alias twice.
+			 */
+			return "mem:" + System.currentTimeMillis();
+		}
 	}
 
 	private int getVersion(Connection conn) throws SQLException
@@ -81,10 +107,12 @@ public abstract class DatabaseOpenHelper
 		}
 	}
 
-	private static synchronized String generateTemporaryPath()
+	private static String generateTemporaryPath()
 	{
-		if (mRandom == null)
-			mRandom = new SecureRandom();
+		synchronized (DatabaseOpenHelper.class) {
+			if (mRandom == null)
+				mRandom = new SecureRandom();
+		}
 
 		byte[] suffixBytes = new byte[16];
 		String path;
@@ -96,16 +124,20 @@ public abstract class DatabaseOpenHelper
 			path = Configuration.getDatabasePath(file + File.separator + "database");
 
 			if ((new File(path)).exists() == false)
-				break;
+				return path;
 
 			if (i > 100)
 			{
+				String msg = "Unable to acquire temporary storage within a reasonable number of tries.";
 				if (LOG.isErrorEnabled())
-					LOG.error("Unable to acquire temporary storage within a reasonable number of tries.  Please check that " + Configuration.getDatabasePath("") + " is not full of temporary files.");
+				{
+					LOG.error(msg + "  Please check that " + Configuration.getDatabasePath("") +
+						" is not full of temporary files.");
+				}
+
+				throw new RuntimeException(msg);
 			}
 		}
-
-		return path;
 	}
 
 	public boolean isTemporary()
@@ -113,21 +145,12 @@ public abstract class DatabaseOpenHelper
 		return mName == null;
 	}
 
-	private String getDatabaseUri()
-	{
-		if (mName != null)
-			return "file:" + Configuration.getDatabasePath(mName);
-		else
-			return "mem:.";
-	}
-
 	public synchronized LockableConnection getConnection() throws SQLException
 	{
 		if (mConnection != null && mConnection.isClosed() == false)
 			return mConnection;
 
-		String databaseUri = getDatabaseUri();
-		Connection conn = DriverManager.getConnection("jdbc:hsqldb:" + databaseUri,
+		Connection conn = DriverManager.getConnection("jdbc:hsqldb:" + mUri,
 			"sa", "");
 
 		int version = getVersion(conn);
@@ -168,8 +191,7 @@ public abstract class DatabaseOpenHelper
 			mConnection.lock();
 			try {
 				try {
-					if (isTemporary() == false)
-						DatabaseUtils.execute(mConnection, "SHUTDOWN");
+					DatabaseUtils.execute(mConnection, "SHUTDOWN");
 				} finally {
 					mConnection.close();
 				}
