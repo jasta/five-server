@@ -177,7 +177,7 @@ public class ArtistDAO extends AbstractDAO
 
 		public String getContentType()
 		{
-			return "whatever/artist";
+			return "application/vnd.five.artists";
 		}
 
 		public void writeRecordTo(OutputStream out) throws IOException, SQLException
