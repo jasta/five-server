@@ -128,6 +128,15 @@ public class SongDAO extends AbstractDAO
 			"WHERE " + Columns._ID + " = ?", String.valueOf(_id));
 	}
 
+	public SongEntryDAO getSong(long id) throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
+			"SELECT * FROM " + TABLE + " WHERE " + Columns._ID + " = ? LIMIT 1",
+			String.valueOf(id));
+
+		return SongEntryDAO.newInstance(set);
+	}
+
 	public SongEntryDAO getSong(String filename) throws SQLException
 	{
 		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
@@ -232,6 +241,7 @@ public class SongDAO extends AbstractDAO
 		private final int mColumnTitle;
 		private final int mColumnMtime;
 		private final int mColumnBitrate;
+		private final int mColumnMimeType;
 
 		private static final Creator<SongEntryDAO> CREATOR = new Creator<SongEntryDAO>()
 		{
@@ -266,6 +276,7 @@ public class SongDAO extends AbstractDAO
 			mColumnTitle = map.getColumnIndex(Columns.TITLE);
 			mColumnMtime = map.getColumnIndex(Columns.MTIME);
 			mColumnBitrate = map.getColumnIndex(Columns.BITRATE);
+			mColumnMimeType = map.getColumnIndex(Columns.MIME_TYPE);
 		}
 
 		public long getId() throws SQLException
@@ -306,6 +317,11 @@ public class SongDAO extends AbstractDAO
 		public int getBitrate() throws SQLException
 		{
 			return mSet.getInt(mColumnBitrate);
+		}
+
+		public String getMimeType() throws SQLException
+		{
+			return mSet.getString(mColumnMimeType);
 		}
 
 		public String getContentType()

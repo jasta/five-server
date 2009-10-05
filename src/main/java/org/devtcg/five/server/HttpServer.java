@@ -14,10 +14,14 @@
 
 package org.devtcg.five.server;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.SQLException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.http.Header;
 import org.apache.http.HttpException;
@@ -27,6 +31,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.MethodNotSupportedException;
 import org.apache.http.RequestLine;
 import org.apache.http.entity.AbstractHttpEntity;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.devtcg.five.content.AbstractTableMerger;
@@ -34,6 +39,7 @@ import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.content.AbstractTableMerger.SyncableColumns;
 import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.meta.MetaSyncAdapter;
+import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.SyncableProvider;
 
@@ -44,11 +50,14 @@ public class HttpServer extends AbstractHttpServer
 		setRequestHandler(mHttpHandler);
 	}
 
-	private final HttpRequestHandler mHttpHandler = new HttpRequestHandler()
+	private static final HttpRequestHandler mHttpHandler = new HttpRequestHandler()
 	{
-		private static final String LAST_MODIFIED_HEADER = "Last-Modified";
+		private static final String RANGE_HEADER = "Range";
+		private static final String CONTENT_RANGE_HEADER = "Content-Range";
+		private static final String LAST_MODIFIED_HEADER = "X-Last-Modified";
 		private static final String MODIFIED_SINCE_HEADER = "X-Modified-Since";
-		private static final String ENTITY_COUNT_HEADER = "X-Entity-Count";
+		private static final String CURSOR_POSITION_HEADER = "X-Cursor-Position";
+		private static final String CURSOR_COUNT_HEADER = "X-Cursor-Count";
 
 		private boolean handleFeed(HttpRequest request, HttpResponse response,
 			HttpContext context) throws SQLException
@@ -94,7 +103,8 @@ public class HttpServer extends AbstractHttpServer
 
 				SyncableEntryDAO entryDAO = merger.getEntryDAO(clientDiffs);
 
-				response.setHeader(ENTITY_COUNT_HEADER, String.valueOf(entityCount));
+				response.setHeader(CURSOR_POSITION_HEADER, String.valueOf(0));
+				response.setHeader(CURSOR_COUNT_HEADER, String.valueOf(entityCount));
 				response.setHeader(LAST_MODIFIED_HEADER, String.valueOf(lastModified));
 				response.setEntity(new EntryDAOEntity(clientDiffs, entryDAO));
 				response.setStatusCode(HttpStatus.SC_OK);
@@ -103,6 +113,104 @@ public class HttpServer extends AbstractHttpServer
 			}
 
 			return false;
+		}
+
+		private RangeHeader parseRangeRequest(HttpRequest request)
+		{
+			Header hdr = request.getLastHeader(RANGE_HEADER);
+
+			if (hdr == null)
+				return null;
+
+			String rangeStr = hdr.getValue();
+			Pattern pattern = Pattern.compile("bytes=(\\d+)-(\\d+)?");
+			Matcher matcher = pattern.matcher(rangeStr);
+
+			try {
+				if (matcher.matches() == false)
+					throw new IllegalArgumentException();
+
+				long first;
+				long last;
+
+				first = Long.parseLong(matcher.group(1));
+
+				String lastString = matcher.group(2);
+				if (lastString != null)
+					last = Long.parseLong(lastString);
+				else
+					last = -1;
+
+				if (first < 0)
+					throw new IllegalArgumentException();
+
+				RangeHeader header = new RangeHeader();
+				header.firstBytePos = first;
+				header.lastBytePos = last;
+
+				return header;
+			} catch (Exception e) {
+				if (LOG.isWarnEnabled())
+					LOG.warn("Failed to parse range header: " + rangeStr);
+				return null;
+			}
+		}
+
+		private boolean handleSong(HttpRequest request, HttpResponse response,
+			HttpContext context) throws SQLException
+		{
+			String uri = request.getRequestLine().getUri();
+			String[] segments = uri.split("/");
+			if (segments.length < 3)
+				return false;
+
+			long songId;
+			try {
+				songId = Long.parseLong(segments[2]);
+			} catch (NumberFormatException e) {
+				return false;
+			}
+
+			SongDAO.SongEntryDAO song = MetaProvider.getInstance().getSongDAO().getSong(songId);
+
+			if (song == null)
+			{
+				if (LOG.isWarnEnabled())
+					LOG.warn("No song matching request: " + uri);
+
+				return false;
+			}
+
+			File file = new File(song.getFilename());
+			if (file.length() == 0)
+			{
+				if (LOG.isErrorEnabled())
+					LOG.error("Can't serve file " + song.getFilename() + ", 0 length content");
+
+				return false;
+			}
+
+			response.setHeader(LAST_MODIFIED_HEADER, String.valueOf(song.getMtime()));
+
+			RangeHeader rangeHeader = parseRangeRequest(request);
+			if (rangeHeader != null)
+			{
+				long length = file.length();
+
+				response.setHeader(CONTENT_RANGE_HEADER,
+					"bytes " + rangeHeader.firstBytePos + "-" + (length - 1) + "/" + length);
+				response.setEntity(new RangeFileEntity(new File(song.getFilename()),
+					song.getMimeType(), rangeHeader));
+				response.setStatusCode(HttpStatus.SC_PARTIAL_CONTENT);
+			}
+			else
+			{
+				response.setEntity(new FileEntity(new File(song.getFilename()), song.getMimeType()));
+				response.setStatusCode(HttpStatus.SC_OK);
+			}
+
+
+			return true;
 		}
 
 		public void handle(HttpRequest request, HttpResponse response, HttpContext context)
@@ -121,6 +229,8 @@ public class HttpServer extends AbstractHttpServer
 			try {
 				if (requestUriString.startsWith("/feeds/"))
 					handled = handleFeed(request, response, context);
+				else if (requestUriString.startsWith("/songs/"))
+					handled = handleSong(request, response, context);
 			} catch (Exception e) {
 				if (LOG.isWarnEnabled())
 					LOG.warn("Failed to process client sync request", e);
@@ -130,6 +240,75 @@ public class HttpServer extends AbstractHttpServer
 				response.setStatusCode(HttpStatus.SC_NOT_FOUND);
 		}
 	};
+
+
+	private static class RangeHeader
+	{
+		public long firstBytePos;
+		public long lastBytePos;
+	}
+
+	private static class RangeFileEntity extends FileEntity
+	{
+		protected RangeHeader mRangeRequest;
+
+		public RangeFileEntity(File file, String mime, RangeHeader rangeRequest)
+		{
+			super(file, mime);
+			mRangeRequest = rangeRequest;
+		}
+
+		@Override
+		public long getContentLength()
+		{
+			if (mRangeRequest.lastBytePos >= 0)
+				return mRangeRequest.lastBytePos - mRangeRequest.firstBytePos + 1;
+			else
+				return file.length() - mRangeRequest.firstBytePos;
+		}
+
+		private FileInputStream getPositionedStream() throws IOException
+		{
+			FileInputStream in = new FileInputStream(file);
+
+			if (mRangeRequest.firstBytePos > 0)
+				in.skip(mRangeRequest.firstBytePos);
+
+			return in;
+		}
+
+		@Override
+		public InputStream getContent() throws IOException
+		{
+			return getPositionedStream();
+		}
+
+		@Override
+		public void writeTo(OutputStream out) throws IOException
+		{
+			long remaining = getContentLength();
+
+			InputStream in = getPositionedStream();
+			try {
+				byte[] buf = new byte[4096];
+				int n;
+
+				int max = (int)Math.min(remaining, (long)buf.length);
+
+				while ((n = in.read(buf, 0, max)) >= 0)
+				{
+					out.write(buf, 0, n);
+
+					if (remaining == n)
+						break;
+
+					remaining -= n;
+				}
+			} finally {
+				in.close();
+			}
+		}
+	}
 
 	private static class EntryDAOEntity extends AbstractHttpEntity
 	{
