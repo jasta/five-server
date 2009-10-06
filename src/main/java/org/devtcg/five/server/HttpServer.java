@@ -209,7 +209,6 @@ public class HttpServer extends AbstractHttpServer
 				response.setStatusCode(HttpStatus.SC_OK);
 			}
 
-
 			return true;
 		}
 
