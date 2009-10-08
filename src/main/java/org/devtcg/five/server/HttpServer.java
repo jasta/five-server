@@ -40,8 +40,11 @@ import org.devtcg.five.content.AbstractTableMerger.SyncableColumns;
 import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.meta.MetaSyncAdapter;
 import org.devtcg.five.meta.dao.SongDAO;
+import org.devtcg.five.meta.data.Protos;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.SyncableProvider;
+
+import com.google.protobuf.CodedOutputStream;
 
 public class HttpServer extends AbstractHttpServer
 {
@@ -106,7 +109,7 @@ public class HttpServer extends AbstractHttpServer
 				response.setHeader(CURSOR_POSITION_HEADER, String.valueOf(0));
 				response.setHeader(CURSOR_COUNT_HEADER, String.valueOf(entityCount));
 				response.setHeader(LAST_MODIFIED_HEADER, String.valueOf(lastModified));
-				response.setEntity(new EntryDAOEntity(clientDiffs, entryDAO));
+				response.setEntity(new EntryDAOEntity(clientDiffs, entryDAO, entityCount));
 				response.setStatusCode(HttpStatus.SC_OK);
 
 				return true;
@@ -313,12 +316,14 @@ public class HttpServer extends AbstractHttpServer
 	{
 		private final SyncableProvider mProvider;
 		private final SyncableEntryDAO mDAO;
+		private final int mCount;
 
-		public EntryDAOEntity(SyncableProvider provider, SyncableEntryDAO dao)
+		public EntryDAOEntity(SyncableProvider provider, SyncableEntryDAO dao, int entityCount)
 		{
 			super();
 			mProvider = provider;
 			mDAO = dao;
+			mCount = entityCount;
 			setContentType(dao.getContentType());
 		}
 
@@ -349,17 +354,27 @@ public class HttpServer extends AbstractHttpServer
 
 		public void writeTo(OutputStream out) throws IOException
 		{
+			CodedOutputStream stream = CodedOutputStream.newInstance(out);
 			try {
+				stream.writeRawLittleEndian32(mCount);
 				while (mDAO.moveToNext())
-					mDAO.writeRecordTo(out);
+				{
+					Protos.Record entry = mDAO.getEntry();
+					stream.writeRawLittleEndian32(entry.getSerializedSize());
+					entry.writeTo(stream);
+				}
 			} catch (SQLException e) {
 				throw new RuntimeException(e);
 			} finally {
 				try {
+					stream.flush();
+				} catch (IOException e) {}
+				try {
 					mDAO.close();
 					mProvider.close();
 				} catch (SQLException e) {
-					throw new RuntimeException(e);
+					if (LOG.isWarnEnabled())
+						LOG.warn("Unable to cleanup data objects after client sync", e);
 				}
 			}
 		}

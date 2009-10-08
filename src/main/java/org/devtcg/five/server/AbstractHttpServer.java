@@ -188,6 +188,7 @@ public abstract class AbstractHttpServer extends CancelableThread
 				while (isInterrupted() == false && mConn.isOpen())
 					mService.handleRequest(mConn, ctx);
 			} catch (Exception e) {
+				e.printStackTrace();
 				if (LOG.isDebugEnabled())
 					LOG.debug("HTTP client worker disrupted", e);
 			} finally {

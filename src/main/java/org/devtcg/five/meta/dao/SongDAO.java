@@ -29,6 +29,8 @@ import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO;
 import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO.Creator;
 import org.devtcg.five.meta.dao.AlbumDAO.AlbumEntryDAO;
 import org.devtcg.five.meta.dao.AlbumDAO.Columns;
+import org.devtcg.five.meta.data.Protos;
+import org.devtcg.five.meta.data.Protos.Record;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -242,6 +244,8 @@ public class SongDAO extends AbstractDAO
 		private final int mColumnMtime;
 		private final int mColumnBitrate;
 		private final int mColumnMimeType;
+		private final int mColumnLength;
+		private final int mColumnTrack;
 
 		private static final Creator<SongEntryDAO> CREATOR = new Creator<SongEntryDAO>()
 		{
@@ -277,6 +281,8 @@ public class SongDAO extends AbstractDAO
 			mColumnMtime = map.getColumnIndex(Columns.MTIME);
 			mColumnBitrate = map.getColumnIndex(Columns.BITRATE);
 			mColumnMimeType = map.getColumnIndex(Columns.MIME_TYPE);
+			mColumnLength = map.getColumnIndex(Columns.LENGTH);
+			mColumnTrack = map.getColumnIndex(Columns.TRACK);
 		}
 
 		public long getId() throws SQLException
@@ -324,15 +330,42 @@ public class SongDAO extends AbstractDAO
 			return mSet.getString(mColumnMimeType);
 		}
 
+		public int getLength() throws SQLException
+		{
+			return mSet.getInt(mColumnLength);
+		}
+
+		public int getTrack() throws SQLException
+		{
+			return mSet.getInt(mColumnTrack);
+		}
+
 		public String getContentType()
 		{
 			return "application/vnd.five.song";
 		}
 
-		public void writeRecordTo(OutputStream out) throws IOException, SQLException
+		public Record getEntry() throws SQLException
 		{
-			out.write(toString().getBytes());
-			out.write('\n');
+			Protos.Song.Builder builder = Protos.Song.newBuilder();
+			builder.setId(getId());
+			builder.setArtistId(getArtistId());
+			builder.setAlbumId(getAlbumId());
+			String mbid = getMbid();
+			if (mbid != null)
+				builder.setMbid(getMbid());
+			String mimeType = getMimeType();
+			if (mimeType != null)
+				builder.setMimeType(mimeType);
+			builder.setBitrate(getBitrate());
+			builder.setFilesize(new File(getFilename()).length());
+			builder.setLength(getLength());
+			builder.setTitle(getTitle());
+			builder.setTrack(getTrack());
+
+			return Protos.Record.newBuilder()
+				.setType(Protos.Record.Type.SONG)
+				.setSong(builder.build()).build();
 		}
 
 		public String toString()

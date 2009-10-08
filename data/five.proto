@@ -1,0 +1,48 @@
+option java_package = "org.devtcg.five.meta.data";
+option java_outer_classname = "Protos";
+
+message Artist {
+	required int64 id = 1;
+	optional string mbid = 2;
+	required string name = 3;
+	optional int64 discoveryDate = 4;
+}
+
+message Album {
+	required int64 id = 1;
+	required int64 artistId = 2;
+	optional string mbid = 3;
+	required string name = 4;
+	optional int64 discoveryDate = 5;
+	optional int64 releaseDate = 6;
+}
+
+message Song {
+	required int64 id = 1;
+	required int64 artistId = 2;
+	required int64 albumId = 3;
+	optional string mbid = 4;
+	optional string mimeType = 5;
+	optional int32 bitrate = 6;
+	optional int64 filesize = 7;
+	optional int32 length = 8;
+	required string title = 9;
+	optional int32 track = 10;
+}
+
+message Record {
+	enum Type { ARTIST = 1; ALBUM = 2; SONG = 3; }
+
+	required Type type = 1;
+
+	optional Artist artist = 2;
+	optional Album album = 3;
+	optional Song song = 4;
+}
+
+// This message type is being implemented manually to reduce memory pressure
+// for large data sets.
+//message ChangeLog {
+//	repeated int64 deleted = 1;
+//	repeated Record addedOrModified = 2;
+//}

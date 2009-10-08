@@ -14,14 +14,14 @@
 
 package org.devtcg.five.content;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.sql.SQLException;
+
+import org.devtcg.five.meta.data.Protos;
 
 public interface SyncableEntryDAO
 {
 	public void close() throws SQLException;
 	public String getContentType();
 	public boolean moveToNext() throws SQLException;
-	public void writeRecordTo(OutputStream out) throws IOException, SQLException;
+	public Protos.Record getEntry() throws SQLException;
 }

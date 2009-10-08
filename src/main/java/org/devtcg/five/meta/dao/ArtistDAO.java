@@ -23,6 +23,8 @@ import java.sql.SQLException;
 import org.devtcg.five.content.AbstractTableMerger;
 import org.devtcg.five.content.ColumnsMap;
 import org.devtcg.five.content.SyncableEntryDAO;
+import org.devtcg.five.meta.data.Protos;
+import org.devtcg.five.meta.data.Protos.Artist;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -175,15 +177,29 @@ public class ArtistDAO extends AbstractDAO
 			return mSet.getString(mColumnNameMatch);
 		}
 
+		public long getDiscoveryDate() throws SQLException
+		{
+			return mSet.getLong(mColumnDiscoveryDate);
+		}
+
 		public String getContentType()
 		{
 			return "application/vnd.five.artist";
 		}
 
-		public void writeRecordTo(OutputStream out) throws IOException, SQLException
+		public Protos.Record getEntry() throws SQLException
 		{
-			out.write(toString().getBytes());
-			out.write('\n');
+			Protos.Artist.Builder builder = Protos.Artist.newBuilder();
+			builder.setId(getId());
+			String mbid = getMbid();
+			if (mbid != null)
+				builder.setMbid(getMbid());
+			builder.setName(getName());
+			builder.setDiscoveryDate(getDiscoveryDate());
+
+			return Protos.Record.newBuilder()
+				.setType(Protos.Record.Type.ARTIST)
+				.setArtist(builder.build()).build();
 		}
 
 		public String toString()

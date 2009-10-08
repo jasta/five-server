@@ -27,6 +27,8 @@ import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO.Creator;
 import org.devtcg.five.meta.dao.ArtistDAO.ArtistEntryDAO;
 import org.devtcg.five.meta.dao.ArtistDAO.Columns;
+import org.devtcg.five.meta.data.Protos;
+import org.devtcg.five.meta.data.Protos.Record;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -206,10 +208,19 @@ public class AlbumDAO extends AbstractDAO
 			return "application/vnd.five.album";
 		}
 
-		public void writeRecordTo(OutputStream out) throws IOException, SQLException
+		public Record getEntry() throws SQLException
 		{
-			out.write(toString().getBytes());
-			out.write('\n');
+			Protos.Album.Builder builder = Protos.Album.newBuilder();
+			builder.setId(getId());
+			builder.setArtistId(getArtistId());
+			String mbid = getMbid();
+			if (mbid != null)
+				builder.setMbid(getMbid());
+			builder.setName(getName());
+
+			return Protos.Record.newBuilder()
+				.setType(Protos.Record.Type.ALBUM)
+				.setAlbum(builder.build()).build();
 		}
 
 		public String toString()
