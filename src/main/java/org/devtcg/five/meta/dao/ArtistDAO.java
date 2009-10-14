@@ -120,6 +120,7 @@ public class ArtistDAO extends AbstractDAO
 	public static class ArtistEntryDAO extends AbstractSyncableEntryDAO
 	{
 		private final int mColumnId;
+		private final int mColumnSyncTime;
 		private final int mColumnMbid;
 		private final int mColumnName;
 		private final int mColumnNameMatch;
@@ -151,6 +152,7 @@ public class ArtistDAO extends AbstractDAO
 			ColumnsMap map = ColumnsMap.fromResultSet(set);
 
 			mColumnId = map.getColumnIndex(Columns._ID);
+			mColumnSyncTime = map.getColumnIndex(Columns._SYNC_TIME);
 			mColumnMbid = map.getColumnIndex(Columns.MBID);
 			mColumnName = map.getColumnIndex(Columns.NAME);
 			mColumnNameMatch = map.getColumnIndex(Columns.NAME_MATCH);
@@ -160,6 +162,11 @@ public class ArtistDAO extends AbstractDAO
 		public long getId() throws SQLException
 		{
 			return mSet.getLong(mColumnId);
+		}
+
+		public long getSyncTime() throws SQLException
+		{
+			return mSet.getLong(mColumnSyncTime);
 		}
 
 		public String getMbid() throws SQLException
@@ -191,6 +198,7 @@ public class ArtistDAO extends AbstractDAO
 		{
 			Protos.Artist.Builder builder = Protos.Artist.newBuilder();
 			builder.setId(getId());
+			builder.setSyncTime(getSyncTime());
 			String mbid = getMbid();
 			if (mbid != null)
 				builder.setMbid(getMbid());

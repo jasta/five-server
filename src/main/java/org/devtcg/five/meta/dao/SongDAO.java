@@ -236,6 +236,7 @@ public class SongDAO extends AbstractDAO
 	public static class SongEntryDAO extends AbstractSyncableEntryDAO
 	{
 		private final int mColumnId;
+		private final int mColumnSyncTime;
 		private final int mColumnArtistId;
 		private final int mColumnAlbumId;
 		private final int mColumnMbid;
@@ -273,6 +274,7 @@ public class SongDAO extends AbstractDAO
 			ColumnsMap map = ColumnsMap.fromResultSet(set);
 
 			mColumnId = map.getColumnIndex(Columns._ID);
+			mColumnSyncTime = map.getColumnIndex(Columns._SYNC_TIME);
 			mColumnArtistId = map.getColumnIndex(Columns.ARTIST_ID);
 			mColumnAlbumId = map.getColumnIndex(Columns.ALBUM_ID);
 			mColumnMbid = map.getColumnIndex(Columns.MBID);
@@ -288,6 +290,11 @@ public class SongDAO extends AbstractDAO
 		public long getId() throws SQLException
 		{
 			return mSet.getLong(mColumnId);
+		}
+
+		public long getSyncTime() throws SQLException
+		{
+			return mSet.getLong(mColumnSyncTime);
 		}
 
 		public long getArtistId() throws SQLException
@@ -349,6 +356,7 @@ public class SongDAO extends AbstractDAO
 		{
 			Protos.Song.Builder builder = Protos.Song.newBuilder();
 			builder.setId(getId());
+			builder.setSyncTime(getSyncTime());
 			builder.setArtistId(getArtistId());
 			builder.setAlbumId(getAlbumId());
 			String mbid = getMbid();

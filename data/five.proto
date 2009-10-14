@@ -3,31 +3,34 @@ option java_outer_classname = "Protos";
 
 message Artist {
 	required int64 id = 1;
-	optional string mbid = 2;
-	required string name = 3;
-	optional int64 discoveryDate = 4;
+	required int64 syncTime = 2;
+	optional string mbid = 3;
+	required string name = 4;
+	optional int64 discoveryDate = 5;
 }
 
 message Album {
 	required int64 id = 1;
-	required int64 artistId = 2;
-	optional string mbid = 3;
-	required string name = 4;
-	optional int64 discoveryDate = 5;
-	optional int64 releaseDate = 6;
+	required int64 syncTime = 2;
+	required int64 artistId = 3;
+	optional string mbid = 4;
+	required string name = 5;
+	optional int64 discoveryDate = 6;
+	optional int64 releaseDate = 7;
 }
 
 message Song {
 	required int64 id = 1;
-	required int64 artistId = 2;
-	required int64 albumId = 3;
-	optional string mbid = 4;
-	optional string mimeType = 5;
-	optional int32 bitrate = 6;
-	optional int64 filesize = 7;
-	optional int32 length = 8;
-	required string title = 9;
-	optional int32 track = 10;
+	required int64 syncTime = 2;
+	required int64 artistId = 3;
+	required int64 albumId = 4;
+	optional string mbid = 5;
+	optional string mimeType = 6;
+	optional int32 bitrate = 7;
+	optional int64 filesize = 8;
+	optional int32 length = 9;
+	required string title = 10;
+	optional int32 track = 11;
 }
 
 message Record {
