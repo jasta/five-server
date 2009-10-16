@@ -97,10 +97,10 @@ public class HttpServer extends AbstractHttpServer
 				SyncableProvider clientDiffs = MetaProvider.getTemporaryInstance();
 				merger.findLocalChanges(clientDiffs, modifiedSince);
 
-				int entityCount = DatabaseUtils.integerForQuery(clientDiffs.getConnection(),
+				int entityCount = DatabaseUtils.integerForQuery(clientDiffs.getConnection().getWrappedConnection(),
 					"SELECT COUNT(*) FROM " + merger.getTableName(), (String[])null);
 
-				long lastModified = DatabaseUtils.longForQuery(clientDiffs.getConnection(),
+				long lastModified = DatabaseUtils.longForQuery(clientDiffs.getConnection().getWrappedConnection(),
 					"SELECT MAX(" + SyncableColumns._SYNC_TIME + ") FROM " + merger.getTableName(),
 					(String[])null);
 

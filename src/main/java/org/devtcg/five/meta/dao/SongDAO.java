@@ -119,20 +119,20 @@ public class SongDAO extends AbstractDAO
 
 	public void markAll() throws SQLException
 	{
-		DatabaseUtils.execute(mProvider.getConnection(),
+		DatabaseUtils.execute(mProvider.getConnection().getWrappedConnection(),
 			"UPDATE " + TABLE + " SET " + Columns.MARK + "=1");
 	}
 
 	public void unmark(long _id) throws SQLException
 	{
-		DatabaseUtils.execute(mProvider.getConnection(),
+		DatabaseUtils.execute(mProvider.getConnection().getWrappedConnection(),
 			"UPDATE " + TABLE + " SET " + Columns.MARK + " = 0 " +
 			"WHERE " + Columns._ID + " = ?", String.valueOf(_id));
 	}
 
 	public SongEntryDAO getSong(long id) throws SQLException
 	{
-		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
 			"SELECT * FROM " + TABLE + " WHERE " + Columns._ID + " = ? LIMIT 1",
 			String.valueOf(id));
 
@@ -141,7 +141,7 @@ public class SongDAO extends AbstractDAO
 
 	public SongEntryDAO getSong(String filename) throws SQLException
 	{
-		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
 			"SELECT * FROM " + TABLE + " WHERE " + Columns.FILENAME + " = ? LIMIT 1", filename);
 
 		return SongEntryDAO.newInstance(set);

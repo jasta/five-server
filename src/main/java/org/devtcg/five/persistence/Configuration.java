@@ -130,17 +130,17 @@ public class Configuration
 	 */
 	public synchronized void setDebugConfiguration() throws SQLException
 	{
-		Connection conn = mDatabase.getConnection();
+		Connection conn = mDatabase.getConnection().getWrappedConnection();
 
 		DatabaseUtils.execute(conn, "UPDATE configuration SET " +
 				Columns.FIRST_TIME + " = ?, " +
 				Columns.LIBRARY_PATH + " = ?",
-			"0", "/music/A");
+			"0", "/music");
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException
 	{
-		Connection conn = mDatabase.getConnection();
+		Connection conn = mDatabase.getConnection().getWrappedConnection();
 
 		return DatabaseUtils.booleanForQuery(conn, true,
 			"SELECT " + Columns.FIRST_TIME + " FROM configuration");
@@ -153,7 +153,7 @@ public class Configuration
 
 	public synchronized List<String> getLibraryPaths() throws SQLException
 	{
-		Connection conn = mDatabase.getConnection();
+		Connection conn = mDatabase.getConnection().getWrappedConnection();
 
 		String pathsValue = DatabaseUtils.stringForQuery(conn,
 			"SELECT " + Columns.LIBRARY_PATH + " FROM configuration");

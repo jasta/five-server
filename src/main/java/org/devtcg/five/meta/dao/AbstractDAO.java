@@ -64,7 +64,10 @@ public abstract class AbstractDAO
 	protected synchronized InsertHelper getInsertHelper() throws SQLException
 	{
 		if (mInserter == null)
-			mInserter = new InsertHelper(mProvider.getConnection(), getTable());
+		{
+			mInserter = new InsertHelper(mProvider.getConnection().getWrappedConnection(),
+				getTable());
+		}
 
 		return mInserter;
 	}
@@ -76,7 +79,7 @@ public abstract class AbstractDAO
 		protected static ResultSet getResultSet(SyncableProvider provider, String table)
 			throws SQLException
 		{
-			return DatabaseUtils.executeForResult(provider.getConnection(),
+			return DatabaseUtils.executeForResult(provider.getConnection().getWrappedConnection(),
 				"SELECT * FROM " + table, (String[])null);
 		}
 

@@ -191,7 +191,7 @@ public abstract class DatabaseOpenHelper
 			mConnection.lock();
 			try {
 				try {
-					DatabaseUtils.execute(mConnection, "SHUTDOWN");
+					DatabaseUtils.execute(mConnection.getWrappedConnection(), "SHUTDOWN");
 				} finally {
 					mConnection.close();
 				}

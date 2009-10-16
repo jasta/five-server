@@ -84,7 +84,7 @@ public class ArtistDAO extends AbstractDAO
 
 	public ArtistEntryDAO getArtist(String name) throws SQLException
 	{
-		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
 			"SELECT * FROM " + TABLE + " WHERE " + Columns.NAME_MATCH + " = ?",
 			name);
 

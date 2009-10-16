@@ -29,10 +29,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * Wrapper around Connection which can provide fair locking for database engines
  * that do not support transactions.
  * <p>
- * The lock is not to be used and maintained exclusively by the caller. That is,
+ * The lock is to be used and maintained exclusively by the caller. That is,
  * none of the wrapped methods are implicitly locked.
  */
-public class LockableConnection implements Connection
+public class LockableConnection
 {
 	private final Connection mConnection;
 	private final ReentrantLock mLock = new ReentrantLock(true);
@@ -43,6 +43,11 @@ public class LockableConnection implements Connection
 			throw new IllegalArgumentException("Wrapped connection must not be null.");
 
 		mConnection = conn;
+	}
+
+	public Connection getWrappedConnection()
+	{
+		return mConnection;
 	}
 
 	public void lock()

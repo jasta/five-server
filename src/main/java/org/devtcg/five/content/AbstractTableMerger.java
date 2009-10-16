@@ -257,12 +257,12 @@ public abstract class AbstractTableMerger
 		throws SQLException
 	{
 		/* Find all local changes the other side hasn't seen before. */
-		ResultSet set = DatabaseUtils.executeForResult(mDb.getConnection(),
+		ResultSet set = DatabaseUtils.executeForResult(mDb.getConnection().getWrappedConnection(),
 			"SELECT * FROM " + mTable + " WHERE " + SyncableColumns._SYNC_TIME + " > " +
 				lastModified, (String[])null);
 
-		InsertHelper inserter = new InsertHelper(clientDiffs.getConnection(), mTable,
-			SyncableColumns._ID);
+		InsertHelper inserter = new InsertHelper(clientDiffs.getConnection().getWrappedConnection(),
+			mTable, SyncableColumns._ID);
 
 		try {
 			int columnCount = set.getMetaData().getColumnCount();

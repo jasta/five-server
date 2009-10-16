@@ -99,7 +99,7 @@ public class AlbumDAO extends AbstractDAO
 
 	public AlbumEntryDAO getAlbum(long artistId, String nameMatch) throws SQLException
 	{
-		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
 			"SELECT * FROM " + TABLE + " WHERE " + Columns.NAME_MATCH + " = ? AND " +
 				Columns.ARTIST_ID + " = ?",
 			nameMatch, String.valueOf(artistId));
