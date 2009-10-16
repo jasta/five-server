@@ -81,12 +81,14 @@ public class AlbumDAO extends AbstractDAO
 			Columns.NAME + " VARCHAR NOT NULL, " +
 			Columns.NAME_MATCH + " VARCHAR NOT NULL, " +
 			Columns.DISCOVERY_DATE + " BIGINT, " +
-			Columns.RELEASE_DATE + " BIGINT, " +
-			"UNIQUE ("  + Columns.NAME_MATCH + ") " +
+			Columns.RELEASE_DATE + " BIGINT " +
 		")");
 		DatabaseUtils.execute(conn, "CREATE INDEX " +
 			"idx_" + Columns.ARTIST_ID + " ON " + TABLE +
 			" (" + Columns.ARTIST_ID + ")");
+		DatabaseUtils.execute(conn, "CREATE UNIQUE INDEX " +
+			"idx_" + Columns.ARTIST_ID + "_" + Columns.NAME_MATCH + " ON " + TABLE +
+			" (" + Columns.ARTIST_ID + ", " + Columns.NAME_MATCH + ")");
 	}
 
 	@Override
@@ -95,12 +97,12 @@ public class AlbumDAO extends AbstractDAO
 		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
 	}
 
-	public AlbumEntryDAO getAlbum(long artistId, String name) throws SQLException
+	public AlbumEntryDAO getAlbum(long artistId, String nameMatch) throws SQLException
 	{
 		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection(),
 			"SELECT * FROM " + TABLE + " WHERE " + Columns.NAME_MATCH + " = ? AND " +
 				Columns.ARTIST_ID + " = ?",
-			name, String.valueOf(artistId));
+			nameMatch, String.valueOf(artistId));
 
 		return AlbumEntryDAO.newInstance(set);
 	}
