@@ -15,6 +15,7 @@
 package org.devtcg.five.meta.dao;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -70,6 +71,38 @@ public abstract class AbstractDAO
 		}
 
 		return mInserter;
+	}
+
+	/* The implementation of this function sucks big time :) */
+	protected void updateMbidAndImage(long id, String mbidColumn, String imageColumn,
+		String thumbColumn, String mbid, byte[] imageData, byte[] thumbData)
+		throws SQLException
+	{
+		long now = System.currentTimeMillis();
+
+		if (mbid != null)
+		{
+			DatabaseUtils.execute(mProvider.getConnection().getWrappedConnection(),
+				"UPDATE " + getTable() + " SET " +
+				mbidColumn + " = ?, " +
+				BaseColumns._SYNC_TIME + " = ? " +
+				"WHERE " + BaseColumns._ID + " = ?", mbid, String.valueOf(now), String.valueOf(id));
+		}
+
+		if (imageData != null)
+		{
+			PreparedStatement stmt = mProvider.getConnection().prepareStatement(
+				"UPDATE " + getTable() + " SET " +
+				imageColumn + " = ?, " +
+				thumbColumn + " = ?, " +
+				BaseColumns._SYNC_TIME + " = ? " +
+				"WHERE " + BaseColumns._ID + " = ?");
+			stmt.setBytes(1, imageData);
+			stmt.setBytes(2, thumbData);
+			stmt.setLong(3, now);
+			stmt.setLong(4, id);
+			stmt.execute();
+		}
 	}
 
 	protected static abstract class AbstractSyncableEntryDAO implements SyncableEntryDAO

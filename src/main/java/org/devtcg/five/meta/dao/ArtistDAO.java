@@ -14,8 +14,6 @@
 
 package org.devtcg.five.meta.dao;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,7 +22,6 @@ import org.devtcg.five.content.AbstractTableMerger;
 import org.devtcg.five.content.ColumnsMap;
 import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.meta.data.Protos;
-import org.devtcg.five.meta.data.Protos.Artist;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
@@ -45,6 +42,9 @@ public class ArtistDAO extends AbstractDAO
 		/** Canonicalized name used for comparison. Excludes articles,
 		 *  punctuation, etc. */
 		public static final String NAME_MATCH = "name_match";
+
+		public static final String PHOTO = "photo";
+		public static final String PHOTO_THUMB = "photo_thumb";
 
 		/** Timestamp this row was created (i.e. when Five first noticed). */
 		public static final String DISCOVERY_DATE = "discovery_date";
@@ -71,6 +71,8 @@ public class ArtistDAO extends AbstractDAO
 			Columns.MBID + " CHAR(36), " +
 			Columns.NAME + " VARCHAR NOT NULL, " +
 			Columns.NAME_MATCH + " VARCHAR NOT NULL, " +
+			Columns.PHOTO + " BINARY, " +
+			Columns.PHOTO_THUMB + " BINARY, " +
 			Columns.DISCOVERY_DATE + " BIGINT, " +
 			"UNIQUE (" + Columns.NAME_MATCH + ") " +
 		")");
@@ -80,6 +82,15 @@ public class ArtistDAO extends AbstractDAO
 	public void dropTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
+	}
+
+	public ArtistEntryDAO getArtist(long id) throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
+			"SELECT * FROM " + TABLE + " WHERE " + Columns._ID + " = ?",
+			String.valueOf(id));
+
+		return ArtistEntryDAO.newInstance(set);
 	}
 
 	public ArtistEntryDAO getArtist(String name) throws SQLException
@@ -106,6 +117,13 @@ public class ArtistDAO extends AbstractDAO
 		return helper.insert();
 	}
 
+	public void updateMbidAndPhoto(long id, String mbid, byte[] imageData, byte[] thumbData)
+		throws SQLException
+	{
+		updateMbidAndImage(id, Columns.MBID, Columns.PHOTO, Columns.PHOTO_THUMB,
+			mbid, imageData, thumbData);
+	}
+
 	public static class Artist
 	{
 		public long _id;
@@ -125,6 +143,8 @@ public class ArtistDAO extends AbstractDAO
 		private final int mColumnName;
 		private final int mColumnNameMatch;
 		private final int mColumnDiscoveryDate;
+		private final int mColumnPhoto;
+		private final int mColumnPhotoThumb;
 
 		private static final Creator<ArtistEntryDAO> CREATOR = new Creator<ArtistEntryDAO>()
 		{
@@ -157,6 +177,8 @@ public class ArtistDAO extends AbstractDAO
 			mColumnName = map.getColumnIndex(Columns.NAME);
 			mColumnNameMatch = map.getColumnIndex(Columns.NAME_MATCH);
 			mColumnDiscoveryDate = map.getColumnIndex(Columns.DISCOVERY_DATE);
+			mColumnPhoto = map.getColumnIndex(Columns.PHOTO);
+			mColumnPhotoThumb = map.getColumnIndex(Columns.PHOTO_THUMB);
 		}
 
 		public long getId() throws SQLException
@@ -187,6 +209,16 @@ public class ArtistDAO extends AbstractDAO
 		public long getDiscoveryDate() throws SQLException
 		{
 			return mSet.getLong(mColumnDiscoveryDate);
+		}
+
+		public byte[] getPhoto() throws SQLException
+		{
+			return mSet.getBytes(mColumnPhoto);
+		}
+
+		public byte[] getPhotoThumb() throws SQLException
+		{
+			return mSet.getBytes(mColumnPhotoThumb);
 		}
 
 		public String getContentType()

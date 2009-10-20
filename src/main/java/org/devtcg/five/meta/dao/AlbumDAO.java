@@ -14,19 +14,13 @@
 
 package org.devtcg.five.meta.dao;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 import org.devtcg.five.content.AbstractTableMerger;
 import org.devtcg.five.content.ColumnsMap;
 import org.devtcg.five.content.SyncableEntryDAO;
-import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO.Creator;
-import org.devtcg.five.meta.dao.ArtistDAO.ArtistEntryDAO;
-import org.devtcg.five.meta.dao.ArtistDAO.Columns;
 import org.devtcg.five.meta.data.Protos;
 import org.devtcg.five.meta.data.Protos.Record;
 import org.devtcg.five.persistence.DatabaseUtils;
@@ -51,6 +45,9 @@ public class AlbumDAO extends AbstractDAO
 		/** Canonicalized name used for comparison. Excludes articles,
 		 *  punctuation, etc. */
 		public static final String NAME_MATCH = "name_match";
+
+		public static final String ARTWORK = "artwork";
+		public static final String ARTWORK_THUMB = "artwork_thumb";
 
 		/** Timestamp this row was created (i.e. when Five first noticed). */
 		public static final String DISCOVERY_DATE = "discovery_date";
@@ -80,6 +77,8 @@ public class AlbumDAO extends AbstractDAO
 			Columns.MBID + " CHAR(36), " +
 			Columns.NAME + " VARCHAR NOT NULL, " +
 			Columns.NAME_MATCH + " VARCHAR NOT NULL, " +
+			Columns.ARTWORK + " BINARY, " +
+			Columns.ARTWORK_THUMB + " BINARY, " +
 			Columns.DISCOVERY_DATE + " BIGINT, " +
 			Columns.RELEASE_DATE + " BIGINT " +
 		")");
@@ -95,6 +94,15 @@ public class AlbumDAO extends AbstractDAO
 	public void dropTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
+	}
+
+	public AlbumEntryDAO getAlbum(long id) throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
+			"SELECT * FROM " + TABLE + " WHERE " + Columns._ID + " = ?",
+			String.valueOf(id));
+
+		return AlbumEntryDAO.newInstance(set);
 	}
 
 	public AlbumEntryDAO getAlbum(long artistId, String nameMatch) throws SQLException
@@ -123,6 +131,13 @@ public class AlbumDAO extends AbstractDAO
 		return helper.insert();
 	}
 
+	public void updateMbidAndArtwork(long id, String mbid, byte[] imageData, byte[] thumbData)
+		throws SQLException
+	{
+		updateMbidAndImage(id, Columns.MBID, Columns.ARTWORK, Columns.ARTWORK_THUMB,
+			mbid, imageData, thumbData);
+	}
+
 	public static class Album
 	{
 		public long _id;
@@ -146,6 +161,8 @@ public class AlbumDAO extends AbstractDAO
 		private final int mColumnNameMatch;
 		private final int mColumnDiscoveryDate;
 		private final int mColumnReleaseDate;
+		private final int mColumnArtwork;
+		private final int mColumnArtworkThumb;
 
 		private static final Creator<AlbumEntryDAO> CREATOR = new Creator<AlbumEntryDAO>()
 		{
@@ -180,6 +197,8 @@ public class AlbumDAO extends AbstractDAO
 			mColumnNameMatch = map.getColumnIndex(Columns.NAME_MATCH);
 			mColumnDiscoveryDate = map.getColumnIndex(Columns.DISCOVERY_DATE);
 			mColumnReleaseDate = map.getColumnIndex(Columns.RELEASE_DATE);
+			mColumnArtwork = map.getColumnIndex(Columns.ARTWORK);
+			mColumnArtworkThumb = map.getColumnIndex(Columns.ARTWORK_THUMB);
 		}
 
 		public long getId() throws SQLException
@@ -210,6 +229,16 @@ public class AlbumDAO extends AbstractDAO
 		public String getNameMatch() throws SQLException
 		{
 			return mSet.getString(mColumnNameMatch);
+		}
+
+		public byte[] getArtwork() throws SQLException
+		{
+			return mSet.getBytes(mColumnArtwork);
+		}
+
+		public byte[] getArtworkThumb() throws SQLException
+		{
+			return mSet.getBytes(mColumnArtworkThumb);
 		}
 
 		public String getContentType()

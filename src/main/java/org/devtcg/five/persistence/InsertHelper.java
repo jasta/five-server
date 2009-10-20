@@ -186,6 +186,8 @@ public class InsertHelper
 			mPreparedStatement.setLong(index, (Long)value);
 		else if (value instanceof Boolean)
 			mPreparedStatement.setBoolean(index, (Boolean)value);
+		else if (value instanceof byte[])
+			mPreparedStatement.setBytes(index, (byte[])value);
 		else
 			throw new IllegalArgumentException("Type not supported yet.");
 	}

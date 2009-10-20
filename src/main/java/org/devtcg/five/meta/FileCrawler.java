@@ -17,6 +17,8 @@ package org.devtcg.five.meta;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,6 +26,7 @@ import org.devtcg.five.meta.dao.AlbumDAO;
 import org.devtcg.five.meta.dao.ArtistDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.persistence.Configuration;
+import org.devtcg.five.util.CancelableExecutor;
 import org.devtcg.five.util.CancelableThread;
 import org.devtcg.five.util.FileUtils;
 import org.devtcg.five.util.StringUtils;
@@ -105,6 +108,14 @@ public class FileCrawler
 
 	private class CrawlerThread extends CancelableThread
 	{
+		/**
+		 * Used to execute network tasks which will collect extra meta data
+		 * than is available on the filesystem. Currently uses both MusicBrainz
+		 * and Last.fm.
+		 */
+		private final CancelableExecutor mNetworkMetaExecutor =
+			new CancelableExecutor(new LinkedBlockingQueue<FutureTask<?>>());
+
 		private final MetaProvider mProvider;
 
 		private int mFilesScanned = 0;
@@ -163,7 +174,7 @@ public class FileCrawler
 			return -1;
 		}
 
-		private String stringTagValue(List<?> tagValue, String defaultValue)
+		private String stringTagValue(List<?> tagValue, String prefixHack, String defaultValue)
 		{
 			if (tagValue == null || tagValue.size() == 0)
 				return defaultValue;
@@ -173,12 +184,20 @@ public class FileCrawler
 				return defaultValue;
 			}
 
-			return value;
+			/*
+			 * For some reason entagged prepends a prefix like "ARTIST : " on
+			 * id3v1 records. Seems like a bug, but I don't have the energy to
+			 * fix it upstream at the moment.
+			 */
+			if (prefixHack != null && value.startsWith(prefixHack))
+				return value.substring(prefixHack.length());
+			else
+				return value;
 		}
 
 		private int intTagValue(List<?> tagValue, int defaultValue)
 		{
-			String value = stringTagValue(tagValue, null);
+			String value = stringTagValue(tagValue, null, null);
 			if (value == null)
 				return defaultValue;
 
@@ -197,7 +216,12 @@ public class FileCrawler
 				mProvider.getArtistDAO().getArtist(nameMatch);
 
 			if (artistEntry == null)
-				return mProvider.getArtistDAO().insert(artist);
+			{
+				long id = mProvider.getArtistDAO().insert(artist);
+				mNetworkMetaExecutor.execute(new LastfmArtistPhotoTask(mProvider,
+					id, artist).getTask());
+				return id;
+			}
 
 			try {
 				return artistEntry.getId();
@@ -214,7 +238,14 @@ public class FileCrawler
 				mProvider.getAlbumDAO().getAlbum(artistId, nameMatch);
 
 			if (albumEntry == null)
-				return mProvider.getAlbumDAO().insert(artistId, album);
+			{
+				ArtistDAO.ArtistEntryDAO artistEntry =
+					mProvider.getArtistDAO().getArtist(artistId);
+				long id = mProvider.getAlbumDAO().insert(artistId, album);
+				mNetworkMetaExecutor.execute(new LastfmAlbumArtworkTask(mProvider,
+					id, artistEntry.getName(), album).getTask());
+				return id;
+			}
 
 			try {
 				return albumEntry.getId();
@@ -257,9 +288,9 @@ public class FileCrawler
 				AudioFile audioFile = AudioFileIO.read(file);
 				Tag tag = audioFile.getTag();
 
-				String artist = stringTagValue(tag.getArtist(), "<Unknown>");
-				String album = stringTagValue(tag.getAlbum(), "<Unknown>");
-				String title = stringTagValue(tag.getTitle(), null);
+				String artist = stringTagValue(tag.getArtist(), "ARTIST : ", "<Unknown>");
+				String album = stringTagValue(tag.getAlbum(), "ALBUM : ", "<Unknown>");
+				String title = stringTagValue(tag.getTitle(), "TITLE : ", null);
 				int bitrate = audioFile.getBitrate();
 				int length = audioFile.getLength();
 				int track = intTagValue(tag.getTrack(), -1);
@@ -339,6 +370,9 @@ public class FileCrawler
 
 			/* Delete every entry that hasn't been unmarked during traversal. */
 			deleteAllMarked();
+
+			/* Will work whether we were canceled or not. */
+			mNetworkMetaExecutor.shutdownAndWait();
 		}
 
 		public void run()
@@ -359,6 +393,13 @@ public class FileCrawler
 				if (mListener != null)
 					mListener.onFinished(hasCanceled());
 			}
+		}
+
+		@Override
+		protected void onRequestCancel()
+		{
+			interrupt();
+			mNetworkMetaExecutor.requestCancel();
 		}
 	}
 }

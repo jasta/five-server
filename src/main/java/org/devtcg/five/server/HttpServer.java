@@ -31,6 +31,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.MethodNotSupportedException;
 import org.apache.http.RequestLine;
 import org.apache.http.entity.AbstractHttpEntity;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
@@ -39,6 +40,8 @@ import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.content.AbstractTableMerger.SyncableColumns;
 import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.meta.MetaSyncAdapter;
+import org.devtcg.five.meta.dao.AlbumDAO;
+import org.devtcg.five.meta.dao.ArtistDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.meta.data.Protos;
 import org.devtcg.five.persistence.DatabaseUtils;
@@ -215,6 +218,60 @@ public class HttpServer extends AbstractHttpServer
 			return true;
 		}
 
+		private boolean handleImage(HttpRequest request, HttpResponse response,
+			HttpContext context) throws SQLException
+		{
+			String uri = request.getRequestLine().getUri();
+			String[] segments = uri.split("/");
+			if (segments.length < 4)
+				return false;
+
+			boolean thumb = segments[1].equals("imageThumb");
+			String feedType = segments[2];
+
+			long id;
+			try {
+				id = Long.parseLong(segments[3]);
+			} catch (NumberFormatException e) {
+				return false;
+			}
+
+			byte[] data = null;
+
+			if (feedType.equals("artists"))
+			{
+				ArtistDAO.ArtistEntryDAO artist =
+					MetaProvider.getInstance().getArtistDAO().getArtist(id);
+
+				if (thumb)
+					data = artist.getPhotoThumb();
+				else
+					data = artist.getPhoto();
+			}
+			else if (feedType.equals("albums"))
+			{
+				AlbumDAO.AlbumEntryDAO album =
+					MetaProvider.getInstance().getAlbumDAO().getAlbum(id);
+
+				if (thumb)
+					data = album.getArtworkThumb();
+				else
+					data = album.getArtwork();
+			}
+
+			/* Either bogus URI or no photo to transmit, return 404 Not Found. */
+			if (data == null)
+			{
+				System.out.println("No data available for: " + uri);
+				return false;
+			}
+
+			response.setEntity(new ByteArrayEntity(data));
+			response.setStatusCode(HttpStatus.SC_OK);
+
+			return true;
+		}
+
 		public void handle(HttpRequest request, HttpResponse response, HttpContext context)
 			throws HttpException, IOException
 		{
@@ -233,6 +290,8 @@ public class HttpServer extends AbstractHttpServer
 					handled = handleFeed(request, response, context);
 				else if (requestUriString.startsWith("/songs/"))
 					handled = handleSong(request, response, context);
+				else if (requestUriString.startsWith("/imageThumb/") || requestUriString.startsWith("/image/"))
+					handled = handleImage(request, response, context);
 			} catch (Exception e) {
 				if (LOG.isWarnEnabled())
 					LOG.warn("Failed to process client sync request", e);
