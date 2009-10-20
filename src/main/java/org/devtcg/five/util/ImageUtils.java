@@ -106,20 +106,54 @@ public class ImageUtils
 	}
 
 	/**
-	 * A more specialized wrapper for {@link #getScaledInstance(BufferedImage, int, int, Object, boolean)}.
+	 * A more specialized wrapper for
+	 * {@link #getScaledInstance(BufferedImage, int, int, Object, boolean)}.
+	 * Performs cropping to preserve aspect ratio.
 	 */
 	public static byte[] getScaledInstance(byte[] img, int targetWidth, int targetHeight)
 	{
 		try {
 			BufferedImage buf = ImageIO.read(new ByteArrayInputStream(img));
-			BufferedImage scaled = getScaledInstance(buf, targetWidth, targetHeight,
+
+			if (targetWidth != targetHeight)
+				throw new UnsupportedOperationException("TODO");
+
+			/* Crop first. */
+			int w = buf.getWidth();
+			int h = buf.getHeight();
+
+			BufferedImage cropped;
+			if (w == h)
+				cropped = buf;
+			else
+			{
+				int x, y, minDimension;
+
+				if (w > h)
+				{
+					x = (int)((w - h) / 2.0);
+					y = 0;
+				}
+				else
+				{
+					x = 0;
+					y = (int)((h - w) / 2.0);
+				}
+
+				minDimension = Math.min(w, h);
+				cropped = buf.getSubimage(x, y, minDimension, minDimension);
+			}
+
+			BufferedImage scaledAndCropped = getScaledInstance(cropped, targetWidth, targetHeight,
 				RenderingHints.VALUE_INTERPOLATION_BILINEAR, true);
+
+			/* Export as a JPEG byte array. */
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
-			JPEGEncodeParam param = encoder.getDefaultJPEGEncodeParam(scaled);
+			JPEGEncodeParam param = encoder.getDefaultJPEGEncodeParam(scaledAndCropped);
 			param.setQuality(0.75f, false);
 			encoder.setJPEGEncodeParam(param);
-			encoder.encode(scaled);
+			encoder.encode(scaledAndCropped);
 			out.close();
 			return out.toByteArray();
 		} catch (IOException e) {
