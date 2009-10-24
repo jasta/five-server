@@ -18,6 +18,15 @@ import java.io.File;
 
 public class FileUtils
 {
+	public static String removeExtension(String filename)
+	{
+		int extIndex = filename.lastIndexOf('.');
+		if (extIndex <= 0)
+			return filename;
+
+		return filename.substring(0, extIndex);
+	}
+
 	public static String getExtension(String filename)
 	{
 		int extIndex = filename.lastIndexOf('.') + 1;

@@ -14,7 +14,15 @@
 
 package org.devtcg.five.meta;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.FutureTask;
@@ -24,7 +32,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.devtcg.five.meta.dao.AlbumDAO;
 import org.devtcg.five.meta.dao.ArtistDAO;
+import org.devtcg.five.meta.dao.PlaylistDAO;
 import org.devtcg.five.meta.dao.SongDAO;
+import org.devtcg.five.meta.dao.PlaylistDAO.Playlist;
+import org.devtcg.five.meta.dao.PlaylistDAO.PlaylistEntryDAO;
 import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.util.CancelableExecutor;
 import org.devtcg.five.util.CancelableThread;
@@ -166,12 +177,144 @@ public class FileCrawler
 			return false;
 		}
 
+		private long processPlaylistSong(PlaylistEntryDAO existing, Playlist playlistBuf,
+			File entry) throws SQLException
+		{
+			if (entry.exists() == false || isSong(entry, FileUtils.getExtension(entry)) == false)
+				return -1;
+
+			/*
+			 * Make sure we have this song in our database to send to clients.
+			 * Duplicates will be prevented by the normal filesystem logic.
+			 */
+			long songId = handleFileSong(entry);
+			if (songId == -1)
+				return -1;
+
+			/*
+			 * Try to detect if an existing playlist has any songs deleted or
+			 * changed positions. This will trigger an updated sync time which
+			 * will then communicate the entire new playlist to the client on
+			 * sync.
+			 */
+			if (existing != null && playlistBuf.hasChanges == false)
+			{
+				long songAtPos = mProvider.getPlaylistSongDAO().getSongAtPosition(existing.getId(),
+					playlistBuf.songs.size());
+				if (songAtPos != songId)
+					playlistBuf.hasChanges = true;
+			}
+
+			playlistBuf.songs.add(songId);
+
+			return songId;
+		}
+
+		private long handlePlaylistPls(File file) throws SQLException
+		{
+			try {
+				BufferedReader reader = new BufferedReader(new FileReader(file), 1024);
+
+				/* Sanity check. */
+				String firstLine = reader.readLine();
+				if (firstLine == null || firstLine.trim().equalsIgnoreCase("[playlist]") == false)
+					return -1;
+
+				PlaylistDAO.PlaylistEntryDAO existingPlaylist =
+					mProvider.getPlaylistDAO().getPlaylist(file.getAbsolutePath());
+
+				/*
+				 * Temporary container used to buffer all playlist entries in
+				 * order to effectively detect changes before we commit to the
+				 * database.
+				 */
+				PlaylistDAO.Playlist playlistBuf =
+					mProvider.getPlaylistDAO().newPlaylist();
+
+				String line;
+				while ((line = reader.readLine()) != null)
+				{
+					line = line.trim();
+
+					if (line.startsWith("File"))
+					{
+						String[] keyPair = line.split("=", 2);
+						if (keyPair.length < 2)
+							continue;
+
+						try {
+							URL entryUrl = new URL(URLDecoder.decode(keyPair[1], "UTF-8"));
+							File entry = new File(entryUrl.getFile());
+							System.out.println("entry=" + entry);
+							processPlaylistSong(existingPlaylist, playlistBuf, entry);
+						} catch (MalformedURLException e) {
+							continue;
+						}
+					}
+				}
+
+				/*
+				 * Couldn't parse any of the playlist entries, or it contained
+				 * none.
+				 */
+				if (playlistBuf.songs.isEmpty())
+				{
+					if (existingPlaylist == null)
+						return -1;
+					else
+						throw new UnsupportedOperationException("Need to delete, but not implemented.");
+				}
+
+				long id;
+				if (existingPlaylist == null)
+				{
+					id = mProvider.getPlaylistDAO().insert(file.getAbsolutePath(),
+						FileUtils.removeExtension(file.getName()), System.currentTimeMillis());
+				}
+				else
+				{
+					id = existingPlaylist.getId();
+					mProvider.getPlaylistDAO().unmark(id);
+				}
+
+				mProvider.getPlaylistSongDAO().deleteByPlaylist(id);
+
+				int pos = 0;
+				for (long songId: playlistBuf.songs)
+					mProvider.getPlaylistSongDAO().insert(id, pos++, songId);
+
+				return id;
+			} catch (IOException e) {
+				return -1;
+			}
+		}
+
+		private long handlePlaylistM3u(File file) throws SQLException
+		{
+			return -1;
+		}
+
 		private long handleFilePlaylist(File file) throws SQLException
 		{
-			if (LOG.isWarnEnabled())
-				LOG.warn(file + ": handleFilePlaylist not implemented!");
+			String ext = FileUtils.getExtension(file);
 
-			return -1;
+			long id = -1;
+
+			if (ext != null)
+			{
+				if (ext.equalsIgnoreCase("m3u") == true)
+					id = handlePlaylistM3u(file);
+				else if (ext.equalsIgnoreCase("pls") == true)
+					id = handlePlaylistPls(file);
+			}
+
+			if (id == -1)
+			{
+				if (LOG.isWarnEnabled())
+					LOG.warn("Can't handle playlist file " + file.getAbsolutePath());
+			}
+
+			return id;
 		}
 
 		private String stringTagValue(List<?> tagValue, String prefixHack, String defaultValue)
@@ -336,6 +479,9 @@ public class FileCrawler
 		private void traverse(File path) throws SQLException
 		{
 			File[] files = path.listFiles();
+			if (files == null)
+				return;
+
 			for (File file : files)
 			{
 				if (hasCanceled() == true)

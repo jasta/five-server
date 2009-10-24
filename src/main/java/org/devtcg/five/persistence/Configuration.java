@@ -135,7 +135,7 @@ public class Configuration
 		DatabaseUtils.execute(conn, "UPDATE configuration SET " +
 				Columns.FIRST_TIME + " = ?, " +
 				Columns.LIBRARY_PATH + " = ?",
-			"0", "/music/A");
+			"0", "/music/A:/music/playlists");
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException

@@ -32,6 +32,10 @@ public class MetaSyncAdapter extends SyncAdapter<MetaProvider>
 			return mProvider.getAlbumDAO().new TableMerger();
 		else if (name.equals("songs"))
 			return mProvider.getSongDAO().new TableMerger();
+		else if (name.equals("playlists"))
+			return mProvider.getPlaylistDAO().new TableMerger();
+		else if (name.equals("playlistSongs"))
+			return mProvider.getPlaylistSongDAO().new TableMerger();
 
 		return null;
 	}

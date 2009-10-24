@@ -33,14 +33,38 @@ message Song {
 	optional int32 track = 11;
 }
 
+message Playlist {
+	required int64 id = 1;
+	required int64 syncTime = 2;
+	optional int64 createdDate = 3;
+	optional string name = 4;
+	repeated int64 songId = 5;
+}
+
+message PlaylistSong {
+	required int64 id = 1;
+	required int64 syncTime = 2;
+	required int64 playlistId = 3;
+	required int32 position = 4;
+	required int64 songId = 5;
+}
+
 message Record {
-	enum Type { ARTIST = 1; ALBUM = 2; SONG = 3; }
+	enum Type {
+		ARTIST = 1;
+		ALBUM = 2;
+		SONG = 3;
+		PLAYLIST = 4;
+		PLAYLIST_SONG = 5;
+	}
 
 	required Type type = 1;
 
 	optional Artist artist = 2;
 	optional Album album = 3;
 	optional Song song = 4;
+	optional Playlist playlist = 5;
+	optional PlaylistSong playlistSong = 6;
 }
 
 // This message type is being implemented manually to reduce memory pressure

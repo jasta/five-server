@@ -106,7 +106,7 @@ public class SongDAO extends AbstractDAO
 			Columns.TRACK + " INTEGER, " +
 			Columns.ARTIST_ID + " INTEGER NOT NULL, " +
 			Columns.ALBUM_ID + " INTEGER NOT NULL, " +
-			Columns.MARK + " BOOLEAN, " +
+			Columns.MARK + " BOOLEAN DEFAULT 0, " +
 			"UNIQUE (" + Columns.FILENAME + ") " +
 		")");
 	}
