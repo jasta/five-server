@@ -68,7 +68,8 @@ public class LastfmAlbumArtworkTask extends LastfmMetaTask
 		{
 			try {
 				imageData = downloadImage(data.imageUrl);
-				thumbData = ImageUtils.getScaledInstance(imageData, THUMB_WIDTH, THUMB_HEIGHT);
+				if (imageData != null)
+					thumbData = ImageUtils.getScaledInstance(imageData, THUMB_WIDTH, THUMB_HEIGHT);
 			} catch (IOException e) {
 				if (LOG.isWarnEnabled())
 					LOG.warn("Failed to download artist photo at " + data.imageUrl);
