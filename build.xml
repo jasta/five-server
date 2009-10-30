@@ -1,0 +1,58 @@
+<project name="five-server" default="dist" basedir=".">
+	<description>
+		Server component for the Five media system.
+	</description>
+
+	<!-- set global properties for this build -->
+	<property name="src" location="src/main/java"/>
+	<property name="build" location="build"/>
+	<property name="dist" location="dist"/>
+	<property name="gen" location="gen"/>
+	<property name="libs" location="libs"/>
+	<property name="data" location="data"/>
+
+	<property name="protoc" value="protoc"/>
+
+	<target name="init">
+		<!-- Create the time stamp -->
+		<tstamp/>
+		<!-- Create the build directory structure used by compile -->
+		<mkdir dir="${build}"/>
+		<mkdir dir="${gen}"/>
+	</target>
+
+	<target name="protoc" depends="init">
+		<echo>Compiling protobufs into Java classes...</echo>
+		<apply executable="${protoc}" failonerror="true">
+			<arg value="--java_out=${gen}" />
+			<arg value="-I${data}" />
+			<fileset dir="${data}">
+				<include name="**/*.proto" />
+			</fileset>
+		</apply>
+	</target>
+
+	<target name="compile" depends="init, protoc" description="compile the source">
+		<!-- Compile the java code from ${src} into ${build} -->
+		<javac srcdir="${src}:${gen}" destdir="${build}">
+			<classpath>
+				<fileset dir="${libs}">
+					<include name="**/*.jar" />
+				</fileset>
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="dist" depends="compile" description="generate the distribution" >
+		<!-- Create the distribution directory -->
+		<mkdir dir="${dist}/lib"/>
+
+		<jar jarfile="${dist}/lib/five-server-${DSTAMP}.jar" basedir="${build}"/>
+	</target>
+
+	<target name="clean" description="clean up" >
+		<!-- Delete the ${build} and ${dist} directory trees -->
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
+	</target>
+</project>
