@@ -77,16 +77,18 @@ public class ImageUtils
 		do {
 			if (higherQuality && w > targetWidth) {
 				w /= 2;
-				if (w < targetWidth) {
-					w = targetWidth;
-				}
+			}
+
+			if (w < targetWidth) {
+				w = targetWidth;
 			}
 
 			if (higherQuality && h > targetHeight) {
 				h /= 2;
-				if (h < targetHeight) {
-					h = targetHeight;
-				}
+			}
+
+			if (h < targetHeight) {
+				h = targetHeight;
 			}
 
 			BufferedImage tmp = new BufferedImage(w, h, type);
