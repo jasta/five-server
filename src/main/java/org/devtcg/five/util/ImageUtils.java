@@ -24,10 +24,6 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import com.sun.image.codec.jpeg.JPEGCodec;
-import com.sun.image.codec.jpeg.JPEGEncodeParam;
-import com.sun.image.codec.jpeg.JPEGImageEncoder;
-
 public class ImageUtils
 {
 	/**
@@ -149,13 +145,12 @@ public class ImageUtils
 
 			/* Export as a JPEG byte array. */
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
-			JPEGEncodeParam param = encoder.getDefaultJPEGEncodeParam(scaledAndCropped);
-			param.setQuality(0.75f, false);
-			encoder.setJPEGEncodeParam(param);
-			encoder.encode(scaledAndCropped);
-			out.close();
-			return out.toByteArray();
+			try {
+				ImageIO.write(scaledAndCropped, "JPEG", out);
+				return out.toByteArray();
+			} finally {
+				out.close();
+			}
 		} catch (IOException e) {
 			return null;
 		}
