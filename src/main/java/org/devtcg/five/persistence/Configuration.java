@@ -52,7 +52,8 @@ public class Configuration
 			home = System.getenv("HOME");
 
 		USER_HOME = new File(home, ".five");
-		if (USER_HOME.isDirectory() == false || USER_HOME.canWrite() == false)
+		if (USER_HOME.mkdirs() == false || USER_HOME.isDirectory() == false ||
+				USER_HOME.canWrite() == false)
 			throw new RuntimeException("Cannot access " + USER_HOME);
 
 		DATABASE_DIR = new File(USER_HOME, "databases");
