@@ -81,7 +81,7 @@ public class PlaylistSongDAO extends AbstractDAO
 	{
 		return DatabaseUtils.longForQuery(mProvider.getConnection().getWrappedConnection(),
 			-1,
-			"SELECT * FROM " + TABLE + " WHERE " + Columns.PLAYLIST_ID + " = ? AND " +
+			"SELECT " + Columns.SONG_ID + " FROM " + TABLE + " WHERE " + Columns.PLAYLIST_ID + " = ? AND " +
 				Columns.POSITION + " = ?",
 			String.valueOf(playlistId), String.valueOf(position));
 	}
