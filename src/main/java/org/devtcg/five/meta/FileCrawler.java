@@ -281,11 +281,14 @@ public class FileCrawler
 					mProvider.getPlaylistDAO().unmark(id);
 				}
 
-				mProvider.getPlaylistSongDAO().deleteByPlaylist(id);
+				if (playlistBuf.hasChanges)
+				{
+					mProvider.getPlaylistSongDAO().deleteByPlaylist(id);
 
-				int pos = 0;
-				for (long songId: playlistBuf.songs)
-					mProvider.getPlaylistSongDAO().insert(id, pos++, songId);
+					int pos = 0;
+					for (long songId: playlistBuf.songs)
+						mProvider.getPlaylistSongDAO().insert(id, pos++, songId);
+				}
 
 				return id;
 			} catch (IOException e) {
