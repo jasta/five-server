@@ -47,7 +47,24 @@
 		<!-- Create the distribution directory -->
 		<mkdir dir="${dist}/lib"/>
 
-		<jar jarfile="${dist}/lib/five-server-${DSTAMP}.jar" basedir="${build}"/>
+		<!-- Unpack the dependent jars into the build path to make a single jar
+		     file. XXX: Maybe use OneJar for this? -->
+		<unzip dest="${build}">
+			<patternset>
+				<include name="**/*.class" />
+				<include name="**/*.properties" />
+			</patternset>
+			<fileset dir="${libs}">
+				<include name="**/*.jar" />
+			</fileset>
+		</unzip>
+
+		<jar jarfile="${dist}/lib/five-server-${DSTAMP}.jar" basedir="${build}">
+			<manifest>
+				<attribute name="Main-Class" value="org.devtcg.five.Main" />
+				<attribute name="Built-Date" value="${TODAY}" />
+			</manifest>
+		</jar>
 	</target>
 
 	<target name="clean" description="clean up" >
