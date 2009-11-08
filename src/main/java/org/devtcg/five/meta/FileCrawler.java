@@ -242,14 +242,18 @@ public class FileCrawler
 						if (keyPair.length < 2)
 							continue;
 
+						File entry;
 						try {
 							URL entryUrl = new URL(URLDecoder.decode(keyPair[1], "UTF-8"));
-							File entry = new File(entryUrl.getFile());
-							System.out.println("entry=" + entry);
-							processPlaylistSong(existingPlaylist, playlistBuf, entry);
+							entry = new File(entryUrl.getFile());
 						} catch (MalformedURLException e) {
-							continue;
+							entry = new File(keyPair[1]);
+							if (!entry.isAbsolute()) {
+								entry = entry.getAbsoluteFile();
+							}
 						}
+						System.out.println("entry=" + entry);
+						processPlaylistSong(existingPlaylist, playlistBuf, entry);
 					}
 				}
 
