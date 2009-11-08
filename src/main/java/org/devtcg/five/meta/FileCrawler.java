@@ -281,9 +281,10 @@ public class FileCrawler
 					mProvider.getPlaylistDAO().unmark(id);
 				}
 
-				if (playlistBuf.hasChanges)
+				if (existingPlaylist == null || playlistBuf.hasChanges)
 				{
-					mProvider.getPlaylistSongDAO().deleteByPlaylist(id);
+					if (existingPlaylist != null)
+						mProvider.getPlaylistSongDAO().deleteByPlaylist(id);
 
 					int pos = 0;
 					for (long songId: playlistBuf.songs)
