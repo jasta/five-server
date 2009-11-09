@@ -52,11 +52,26 @@ public class Configuration
 			home = System.getenv("HOME");
 
 		USER_HOME = new File(home, ".five");
-		if (USER_HOME.mkdirs() == false || USER_HOME.isDirectory() == false ||
-				USER_HOME.canWrite() == false)
-			throw new RuntimeException("Cannot access " + USER_HOME);
+		ensureDirectoryExists(USER_HOME);
 
 		DATABASE_DIR = new File(USER_HOME, "databases");
+		ensureDirectoryExists(DATABASE_DIR);
+	}
+
+	private static void ensureDirectoryExists(File path)
+	{
+		if (!path.exists())
+		{
+			if (path.mkdirs())
+				return;
+		}
+		else
+		{
+			if (path.isDirectory() && path.canWrite())
+				return;
+		}
+
+		throw new RuntimeException("Cannot access or create " + USER_HOME);
 	}
 
 	private Configuration()
@@ -136,7 +151,7 @@ public class Configuration
 		DatabaseUtils.execute(conn, "UPDATE configuration SET " +
 				Columns.FIRST_TIME + " = ?, " +
 				Columns.LIBRARY_PATH + " = ?",
-			"0", "/music/A:/music/playlists");
+			"0", "/music/A");
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException
