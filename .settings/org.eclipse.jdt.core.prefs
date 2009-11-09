@@ -1,4 +1,4 @@
-#Thu Jul 23 01:52:12 PDT 2009
+#Sun Nov 08 18:59:25 PST 2009
 eclipse.preferences.version=1
 org.eclipse.jdt.core.formatter.align_type_members_on_columns=false
 org.eclipse.jdt.core.formatter.alignment_for_arguments_in_allocation_expression=16
@@ -57,7 +57,7 @@ org.eclipse.jdt.core.formatter.comment.insert_new_line_before_root_tags=insert
 org.eclipse.jdt.core.formatter.comment.insert_new_line_for_parameter=insert
 org.eclipse.jdt.core.formatter.comment.line_length=80
 org.eclipse.jdt.core.formatter.compact_else_if=true
-org.eclipse.jdt.core.formatter.continuation_indentation=1
+org.eclipse.jdt.core.formatter.continuation_indentation=2
 org.eclipse.jdt.core.formatter.continuation_indentation_for_array_initializer=1
 org.eclipse.jdt.core.formatter.format_guardian_clause_on_one_line=false
 org.eclipse.jdt.core.formatter.indent_body_declarations_compare_to_annotation_declaration_header=true
@@ -87,7 +87,7 @@ org.eclipse.jdt.core.formatter.insert_new_line_in_empty_block=do not insert
 org.eclipse.jdt.core.formatter.insert_new_line_in_empty_enum_constant=insert
 org.eclipse.jdt.core.formatter.insert_new_line_in_empty_enum_declaration=insert
 org.eclipse.jdt.core.formatter.insert_new_line_in_empty_method_body=insert
-org.eclipse.jdt.core.formatter.insert_new_line_in_empty_type_declaration=insert
+org.eclipse.jdt.core.formatter.insert_new_line_in_empty_type_declaration=do not insert
 org.eclipse.jdt.core.formatter.insert_space_after_and_in_type_parameter=insert
 org.eclipse.jdt.core.formatter.insert_space_after_assignment_operator=insert
 org.eclipse.jdt.core.formatter.insert_space_after_at_in_annotation=do not insert
