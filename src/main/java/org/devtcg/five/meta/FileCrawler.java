@@ -249,7 +249,7 @@ public class FileCrawler
 						} catch (MalformedURLException e) {
 							entry = new File(keyPair[1]);
 							if (!entry.isAbsolute()) {
-								entry = entry.getAbsoluteFile();
+								entry = new File(file.getAbsoluteFile().getParent(), keyPair[1]);
 							}
 						}
 						System.out.println("entry=" + entry);
