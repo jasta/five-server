@@ -27,7 +27,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.devtcg.five.util.HttpUtils;
 import org.devtcg.five.util.IOUtils;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
@@ -41,7 +41,7 @@ public abstract class LastfmMetaTask implements Callable<Object>
 	private static final String API_KEY = "3edc5156fb5dc2d185c1f00ba0282ea5";
 	protected static final String LASTFM_CALL_URL = "http://ws.audioscrobbler.com/2.0/?api_key=" + API_KEY;
 
-	protected static final HttpClient mClient = new DefaultHttpClient();
+	protected static final HttpClient mClient = HttpUtils.newHttpClient();
 
 	protected static final int THUMB_WIDTH = 64;
 	protected static final int THUMB_HEIGHT = 64;
