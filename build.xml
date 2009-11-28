@@ -71,5 +71,6 @@
 		<!-- Delete the ${build} and ${dist} directory trees -->
 		<delete dir="${build}"/>
 		<delete dir="${dist}"/>
+		<delete dir="${gen}" />
 	</target>
 </project>
