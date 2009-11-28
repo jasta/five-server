@@ -21,6 +21,11 @@
 		<mkdir dir="${gen}"/>
 	</target>
 
+	<target name="build-props" depends="init">
+		<mkdir dir="${gen}/org/devtcg/five" />
+		<echo file="${gen}/org/devtcg/five/version.prop" append="false">${DSTAMP}</echo>
+	</target>
+
 	<target name="protoc" depends="init">
 		<echo>Compiling protobufs into Java classes...</echo>
 		<apply executable="${protoc}" failonerror="true">
@@ -32,7 +37,7 @@
 		</apply>
 	</target>
 
-	<target name="compile" depends="init, protoc" description="compile the source">
+	<target name="compile" depends="init, build-props, protoc" description="compile the source">
 		<!-- Compile the java code from ${src} into ${build} -->
 		<javac srcdir="${src}:${gen}" destdir="${build}">
 			<classpath>
@@ -41,6 +46,13 @@
 				</fileset>
 			</classpath>
 		</javac>
+
+		<!-- Copy any generated build properties (such as version.prop). -->
+		<copy todir="${build}" flatten="false">
+			<fileset dir="${gen}">
+				<include name="**/*.prop" />
+			</fileset>
+		</copy>
 	</target>
 
 	<target name="dist" depends="compile" description="generate the distribution" >
@@ -63,6 +75,7 @@
 			<manifest>
 				<attribute name="Main-Class" value="org.devtcg.five.Main" />
 				<attribute name="Built-Date" value="${TODAY}" />
+				<attribute name="Built-By" value="${user.name}" />
 			</manifest>
 		</jar>
 	</target>
