@@ -35,6 +35,7 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
+import org.devtcg.five.Build;
 import org.devtcg.five.content.AbstractTableMerger;
 import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.content.AbstractTableMerger.SyncableColumns;
@@ -47,10 +48,14 @@ import org.devtcg.five.meta.data.Protos;
 import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.SyncableProvider;
 
+import sun.misc.BASE64Decoder;
+
 import com.google.protobuf.CodedOutputStream;
 
 public class HttpServer extends AbstractHttpServer
 {
+	private static final String STANDARD_USER = "fiveuser";
+
 	public HttpServer(int port) throws IOException {
 		super(port);
 		setRequestHandler(mHttpHandler);
@@ -59,11 +64,14 @@ public class HttpServer extends AbstractHttpServer
 	private static final HttpRequestHandler mHttpHandler = new HttpRequestHandler()
 	{
 		private static final String RANGE_HEADER = "Range";
+		private static final String WWW_AUTHENTICATE_HEADER = "WWW-Authenticate";
+		private static final String AUTHORIZATION_HEADER = "Authorization";
 		private static final String CONTENT_RANGE_HEADER = "Content-Range";
 		private static final String LAST_MODIFIED_HEADER = "X-Last-Modified";
 		private static final String MODIFIED_SINCE_HEADER = "X-Modified-Since";
 		private static final String CURSOR_POSITION_HEADER = "X-Cursor-Position";
 		private static final String CURSOR_COUNT_HEADER = "X-Cursor-Count";
+		private static final String FIVE_VERSION_HEADER = "X-Five-Version";
 
 		private boolean handleFeed(HttpRequest request, HttpResponse response,
 			HttpContext context) throws SQLException
@@ -272,7 +280,14 @@ public class HttpServer extends AbstractHttpServer
 			return true;
 		}
 
-		public void handle(HttpRequest request, HttpResponse response, HttpContext context)
+		private boolean handleInfo(HttpRequest request, HttpResponse response, HttpContext context)
+		{
+			response.setHeader(FIVE_VERSION_HEADER, Build.VERSION);
+			response.setStatusCode(HttpStatus.SC_OK);
+			return true;
+		}
+
+		private void handleAuthed(HttpRequest request, HttpResponse response, HttpContext context)
 			throws HttpException, IOException
 		{
 			RequestLine requestLine = request.getRequestLine();
@@ -292,6 +307,8 @@ public class HttpServer extends AbstractHttpServer
 					handled = handleSong(request, response, context);
 				else if (requestUriString.startsWith("/imageThumb/") || requestUriString.startsWith("/image/"))
 					handled = handleImage(request, response, context);
+				else if (requestUriString.equals("/info"))
+					handled = handleInfo(request, response, context);
 			} catch (Exception e) {
 				if (LOG.isWarnEnabled())
 					LOG.warn("Failed to process client sync request", e);
@@ -299,6 +316,58 @@ public class HttpServer extends AbstractHttpServer
 
 			if (handled == false)
 				response.setStatusCode(HttpStatus.SC_NOT_FOUND);
+		}
+
+		private boolean acceptAuth(HttpRequest request)
+		{
+			Header authHead = request.getLastHeader(AUTHORIZATION_HEADER);
+			if (authHead == null)
+				return false;
+
+			String value = authHead.getValue();
+			System.out.println("Authorize header: " + value);
+
+			String requiredScheme = "Basic ";
+
+			if (!value.startsWith(requiredScheme))
+				return false;
+
+			String base64userpass = value.substring(requiredScheme.length());
+
+			String userpassString;
+			try {
+				userpassString = new String(new BASE64Decoder()
+						.decodeBuffer(base64userpass), "UTF-8");
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+
+			String[] userpass = userpassString.split(":", 2);
+			if (userpass.length < 2)
+				throw new RuntimeException("Failed to parse authorize header: " + value);
+
+			System.out.println("Received credentials: user=" + userpass[0] +
+					", pass=" + userpass[1]);
+
+			if (!STANDARD_USER.equals(userpass[0]))
+				return false;
+
+			System.out.println("Accepting credentials: user=" + userpass[0] +
+					", pass=" + userpass[1]);
+
+			return true;
+		}
+
+		public void handle(HttpRequest request, HttpResponse response, HttpContext context)
+			throws HttpException, IOException
+		{
+			if (acceptAuth(request))
+				handleAuthed(request, response, context);
+			else
+			{
+				response.setHeader(WWW_AUTHENTICATE_HEADER, "Basic realm=\"five-server\"");
+				response.setStatusCode(HttpStatus.SC_UNAUTHORIZED);
+			}
 		}
 	};
 
