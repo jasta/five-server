@@ -68,7 +68,8 @@ public class DatabaseUtils {
 		String query, String... args) throws SQLException
 	{
 		try {
-			return stringForQuery(conn, query, args);
+			String result = stringForQuery(conn, query, args);
+			return result != null ? result : defaultValue;
 		} catch (RowNotFoundException e) {
 			return defaultValue;
 		}
@@ -100,7 +101,7 @@ public class DatabaseUtils {
 	{
 		ResultSet set = executeForResult(conn, query, args);
 
-		if (set.next() == false)
+		if (set.next() == false || set.getString(1) == null)
 			throw new RowNotFoundException();
 
 		return set.getInt(1);
@@ -121,7 +122,7 @@ public class DatabaseUtils {
 	{
 		ResultSet set = executeForResult(conn, query, args);
 
-		if (set.next() == false)
+		if (set.next() == false || set.getString(1) == null)
 			throw new RowNotFoundException();
 
 		return set.getLong(1);
@@ -142,7 +143,7 @@ public class DatabaseUtils {
 	{
 		ResultSet set = executeForResult(conn, query, args);
 
-		if (set.next() == false)
+		if (set.next() == false || set.getString(1) == null)
 			throw new RowNotFoundException();
 
 		return set.getBoolean(1);
