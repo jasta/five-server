@@ -39,7 +39,7 @@ public class Configuration
 	private static final File USER_HOME;
 	private static final File DATABASE_DIR;
 
-	private static final int DEFAULT_PORT = 5546;
+	private static final int DEFAULT_PORT = 5545;
 
 	private static final String DB_NAME = "prefs";
 	private static final int DB_VERSION = 2;
