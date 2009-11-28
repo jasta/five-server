@@ -42,7 +42,7 @@ public class Configuration
 	private static final int DEFAULT_PORT = 5546;
 
 	private static final String DB_NAME = "prefs";
-	private static final int DB_VERSION = 1;
+	private static final int DB_VERSION = 2;
 
 	private final DatabaseOpenHelper mDatabase;
 
@@ -84,6 +84,8 @@ public class Configuration
 		public static final String FIRST_TIME = "first_time";
 
 		public static final String LIBRARY_PATH = "library_path";
+
+		public static final String PORT = "port";
 	}
 
 	private static class OpenHelper extends DatabaseOpenHelper
@@ -98,12 +100,14 @@ public class Configuration
 		{
 			DatabaseUtils.execute(conn, "CREATE TABLE configuration (" +
 				Columns.FIRST_TIME + " BOOLEAN, " +
-				Columns.LIBRARY_PATH + " VARCHAR " +
+				Columns.LIBRARY_PATH + " VARCHAR, " +
+				Columns.PORT + " INTEGER " +
 				")");
 			DatabaseUtils.execute(conn, "INSERT INTO configuration (" +
 				Columns.FIRST_TIME + ", " +
-				Columns.LIBRARY_PATH +
-				") VALUES (?, ?)", new String[] { "TRUE", null });
+				Columns.LIBRARY_PATH + ", " +
+				Columns.PORT +
+				") VALUES (?, ?, ?)", new String[] { "TRUE", null, null });
 		}
 
 		private void onDrop(Connection conn) throws SQLException
@@ -151,7 +155,7 @@ public class Configuration
 		DatabaseUtils.execute(conn, "UPDATE configuration SET " +
 				Columns.FIRST_TIME + " = ?, " +
 				Columns.LIBRARY_PATH + " = ?",
-			"0", "/music/A");
+			"0", "/music");
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException
@@ -162,9 +166,12 @@ public class Configuration
 			"SELECT " + Columns.FIRST_TIME + " FROM configuration");
 	}
 
-	public synchronized int getServerPort()
+	public synchronized int getServerPort() throws SQLException
 	{
-		return DEFAULT_PORT;
+		Connection conn = mDatabase.getConnection().getWrappedConnection();
+
+		return DatabaseUtils.integerForQuery(conn, DEFAULT_PORT,
+				"SELECT " + Columns.PORT + " FROM configuration");
 	}
 
 	public synchronized List<String> getLibraryPaths() throws SQLException

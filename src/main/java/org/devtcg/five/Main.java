@@ -65,12 +65,10 @@ public class Main {
 			throw new RuntimeException(e);
 		}
 
-		int port = config.getServerPort();
-
 		try {
-			mServer = new HttpServer(port);
+			mServer = new HttpServer(config.getServerPort());
 			mServer.start();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			/* TODO */
 			throw new RuntimeException(e);
 		}
