@@ -71,7 +71,7 @@
 			</fileset>
 		</unzip>
 
-		<jar jarfile="${dist}/lib/five-server-${DSTAMP}.jar" basedir="${build}">
+		<jar jarfile="${dist}/lib/five-server.jar" basedir="${build}">
 			<manifest>
 				<attribute name="Main-Class" value="org.devtcg.five.Main" />
 				<attribute name="Built-Date" value="${TODAY}" />
