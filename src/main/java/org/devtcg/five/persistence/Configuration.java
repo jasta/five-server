@@ -37,12 +37,13 @@ public class Configuration
 	}
 
 	private static final File USER_HOME;
+	private static final File FIVE_HOME;
 	private static final File DATABASE_DIR;
 
 	private static final int DEFAULT_PORT = 5545;
 
 	private static final String DB_NAME = "prefs";
-	private static final int DB_VERSION = 2;
+	private static final int DB_VERSION = 3;
 
 	private final DatabaseOpenHelper mDatabase;
 
@@ -51,10 +52,12 @@ public class Configuration
 		if (StringUtils.isEmpty(home))
 			home = System.getenv("HOME");
 
-		USER_HOME = new File(home, ".five");
-		ensureDirectoryExists(USER_HOME);
+		USER_HOME = new File(home);
 
-		DATABASE_DIR = new File(USER_HOME, "databases");
+		FIVE_HOME = new File(home, ".five");
+		ensureDirectoryExists(FIVE_HOME);
+
+		DATABASE_DIR = new File(FIVE_HOME, "databases");
 		ensureDirectoryExists(DATABASE_DIR);
 	}
 
@@ -71,7 +74,7 @@ public class Configuration
 				return;
 		}
 
-		throw new RuntimeException("Cannot access or create " + USER_HOME);
+		throw new RuntimeException("Cannot access or create " + FIVE_HOME);
 	}
 
 	private Configuration()
@@ -86,6 +89,10 @@ public class Configuration
 		public static final String LIBRARY_PATH = "library_path";
 
 		public static final String PORT = "port";
+
+		public static final String PASSWORD = "password";
+
+		public static final String USE_UPNP = "use_upnp";
 	}
 
 	private static class OpenHelper extends DatabaseOpenHelper
@@ -99,15 +106,15 @@ public class Configuration
 		public void onCreate(Connection conn) throws SQLException
 		{
 			DatabaseUtils.execute(conn, "CREATE TABLE configuration (" +
-				Columns.FIRST_TIME + " BOOLEAN, " +
-				Columns.LIBRARY_PATH + " VARCHAR, " +
-				Columns.PORT + " INTEGER " +
+				Columns.FIRST_TIME + " BOOLEAN NOT NULL, " +
+				Columns.LIBRARY_PATH + " VARCHAR DEFAULT NULL, " +
+				Columns.PORT + " INTEGER DEFAULT NULL, " +
+				Columns.PASSWORD + " VARCHAR DEFAULT NULL, " +
+				Columns.USE_UPNP + " BOOLEAN DEFAULT NULL" +
 				")");
 			DatabaseUtils.execute(conn, "INSERT INTO configuration (" +
-				Columns.FIRST_TIME + ", " +
-				Columns.LIBRARY_PATH + ", " +
-				Columns.PORT +
-				") VALUES (?, ?, ?)", new String[] { "TRUE", null, null });
+				Columns.FIRST_TIME +
+				") VALUES (?)", new String[] { "TRUE" });
 		}
 
 		private void onDrop(Connection conn) throws SQLException
@@ -142,20 +149,28 @@ public class Configuration
 
 	public static String getStoragePath()
 	{
+		return FIVE_HOME.getAbsolutePath();
+	}
+
+	public static String getHomePath()
+	{
 		return USER_HOME.getAbsolutePath();
 	}
 
 	/**
-	 * @deprecated
+	 * Initializes configured settings after the setup wizard exists successfully.
 	 */
-	public synchronized void setDebugConfiguration() throws SQLException
+	public synchronized void initFirstTime(String libraryPath, String password,
+			boolean useUPnP) throws SQLException
 	{
 		Connection conn = mDatabase.getConnection().getWrappedConnection();
 
 		DatabaseUtils.execute(conn, "UPDATE configuration SET " +
 				Columns.FIRST_TIME + " = ?, " +
-				Columns.LIBRARY_PATH + " = ?",
-			"0", "/music");
+				Columns.LIBRARY_PATH + " = ?, " +
+				Columns.PASSWORD + " = ?, " +
+				Columns.USE_UPNP + " = ?",
+			"FALSE", libraryPath, password, useUPnP ? "TRUE" : "FALSE");
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException

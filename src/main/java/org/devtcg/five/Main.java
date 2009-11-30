@@ -14,7 +14,6 @@
 
 package org.devtcg.five;
 
-import java.io.IOException;
 import java.sql.SQLException;
 
 import org.apache.commons.logging.Log;
@@ -22,48 +21,43 @@ import org.apache.commons.logging.LogFactory;
 import org.devtcg.five.meta.FileCrawler;
 import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.server.HttpServer;
+import org.devtcg.five.ui.Docklet;
+import org.devtcg.five.ui.Setup;
+import org.eclipse.swt.widgets.Display;
 
 public class Main {
 	private static final Log LOG = LogFactory.getLog(Main.class);
 
+	public static Display mDisplay;
+
 	private static HttpServer mServer;
 	private static FileCrawler mCrawler;
 
-	private static final Object mQuitLock = new Object();
-	private static boolean mQuit = false;
-
-	public static void main(String[] args)
+	public static void main(String[] args) throws SQLException
 	{
 		try {
-			start();
+			Configuration config = Configuration.getInstance();
 
-			synchronized (mQuitLock) {
-				while (mQuit == false) {
-					try {
-						mQuitLock.wait();
-					} catch (InterruptedException e) {}
-				}
+			mDisplay = new Display();
+			Display.setAppName("five");
+
+			if (config.isFirstTime())
+				Setup.show(mDisplay);
+			else
+			{
+				Docklet docklet = new Docklet(mDisplay);
+				startServices();
+				docklet.open();
 			}
 		} finally {
-			if (mServer != null)
-				mServer.shutdown();
-
-			if (mCrawler != null && mCrawler.isActive() == true)
-				mCrawler.stopAbruptly();
+			/* Stop any services if started (http server, file crawler, etc...) */
+			stopServices();
 		}
 	}
 
-	private static void start()
+	public static void startServices()
 	{
 		Configuration config = Configuration.getInstance();
-
-		try {
-			if (config.isFirstTime() == true) {
-				config.setDebugConfiguration();
-			}
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
 
 		try {
 			mServer = new HttpServer(config.getServerPort());
@@ -78,12 +72,13 @@ public class Main {
 		mCrawler.startScan();
 	}
 
-	public static void quit()
+	private static void stopServices()
 	{
-		synchronized (mQuitLock) {
-			mQuit = true;
-			mQuitLock.notify();
-		}
+		if (mServer != null)
+			mServer.shutdown();
+
+		if (mCrawler != null && mCrawler.isActive() == true)
+			mCrawler.stopAbruptly();
 	}
 
 	private static final FileCrawler.Listener mCrawlerListener = new FileCrawler.Listener()
