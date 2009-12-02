@@ -1,10 +1,11 @@
-<project name="five-server" default="dist" basedir=".">
+<project name="five-server" default="dist-linux" basedir=".">
 	<description>
 		Server component for the Five media system.
 	</description>
 
 	<!-- set global properties for this build -->
 	<property name="src" location="src/main/java"/>
+	<property name="etc" location="etc"/>
 	<property name="build" location="build"/>
 	<property name="dist" location="dist"/>
 	<property name="gen" location="gen"/>
@@ -42,8 +43,13 @@
 		<javac srcdir="${src}:${gen}" destdir="${build}">
 			<classpath>
 				<fileset dir="${libs}">
-					<include name="**/*.jar" />
+					<include name="*.jar" />
 				</fileset>
+
+				<!-- For compilation, we can use any of the swt flavours
+					 we want.  So, let's pick the least popular one to prove
+					 that point ;) -->
+				<pathelement location="${libs}/swt-3.5.1/win32-win32-x86/swt.jar" />
 			</classpath>
 		</javac>
 
@@ -55,23 +61,18 @@
 		</copy>
 	</target>
 
-	<target name="dist" depends="compile" description="generate the distribution" >
-		<!-- Create the distribution directory -->
-		<mkdir dir="${dist}/lib"/>
+	<target name="dist" depends="dist-clean, compile" description="generate the distribution" >
+		<!-- Create the distribution directories -->
+		<mkdir dir="${dist}/main" />
+		<mkdir dir="${dist}/libs" />
 
-		<!-- Unpack the dependent jars into the build path to make a single jar
-		     file. XXX: Maybe use OneJar for this? -->
-		<unzip dest="${build}">
-			<patternset>
-				<include name="**/*.class" />
-				<include name="**/*.properties" />
-			</patternset>
+		<copy todir="${dist}/libs" flatten="true">
 			<fileset dir="${libs}">
-				<include name="**/*.jar" />
+				<include name="*.jar" />
 			</fileset>
-		</unzip>
+		</copy>
 
-		<jar jarfile="${dist}/lib/five-server.jar" basedir="${build}">
+		<jar jarfile="${dist}/main/five-server.jar" basedir="${build}">
 			<manifest>
 				<attribute name="Main-Class" value="org.devtcg.five.Main" />
 				<attribute name="Built-Date" value="${TODAY}" />
@@ -80,8 +81,36 @@
 		</jar>
 	</target>
 
-	<target name="clean" description="clean up" >
-		<!-- Delete the ${build} and ${dist} directory trees -->
+	<target name="dist-linux" depends="dist">
+		<copy tofile="${dist}/libs/x86/swt.jar" file="${libs}/swt-3.5.1/gtk-linux-x86/swt.jar" />
+		<copy tofile="${dist}/libs/x86_64/swt.jar" file="${libs}/swt-3.5.1/gtk-linux-x86_64/swt.jar" />
+
+		<exec executable="cp" failonerror="true">
+			<arg value="${etc}/five-server.sh" />
+			<arg value="${dist}/five-server" />
+		</exec>
+	</target>
+
+	<target name="dist-windows" depends="dist">
+		<copy tofile="${dist}/libs/x86/swt.jar" file="${libs}/swt-3.5.1/win32-win32-x86/swt.jar" />
+	</target>
+
+	<target name="dist-macosx" depends="dist">
+		<copy tofile="${dist}/libs/x86/swt.jar" file="${libs}/swt-3.5.1/cocoa-macosx/swt.jar" />
+		<copy tofile="${dist}/libs/ppc/swt.jar" file="${libs}/swt-3.5.1/cocoa-macosx/swt.jar" />
+		<copy tofile="${dist}/libs/x86_64/swt.jar" file="${libs}/swt-3.5.1/cocoa-macosx-x86_64/swt.jar" />
+
+		<exec executable="cp" failonerror="true">
+			<arg value="${etc}/five-server.sh" />
+			<arg value="${dist}/five-server" />
+		</exec>
+	</target>
+
+	<target name="dist-clean">
+		<delete dir="${dist}"/>
+	</target>
+
+	<target name="clean" depends="dist-clean" description="clean up" >
 		<delete dir="${build}"/>
 		<delete dir="${dist}"/>
 		<delete dir="${gen}" />

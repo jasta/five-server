@@ -10,6 +10,7 @@
 	<classpathentry kind="lib" path="libs/httpcore-4.0.1.jar"/>
 	<classpathentry kind="lib" path="libs/hsqldb-1.8.0.10.jar" sourcepath="/home/jasta/software/hsqldb-1.8.0.10/src"/>
 	<classpathentry kind="lib" path="libs/protobuf-2.0.3.jar"/>
+	<classpathentry kind="lib" path="libs/swt-3.5.1/gtk-linux-x86_64/swt.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/3"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
