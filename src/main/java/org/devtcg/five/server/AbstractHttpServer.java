@@ -155,8 +155,10 @@ public abstract class AbstractHttpServer extends CancelableThread
 
 				t.start();
 			} catch (IOException e) {
-				if (LOG.isErrorEnabled()) {
-					LOG.error("I/O error initializing connection thread", e);
+				if (!hasCanceled())
+				{
+					if (LOG.isErrorEnabled())
+						LOG.error("I/O error initializing connection thread", e);
 				}
 				break;
 			}
