@@ -15,7 +15,6 @@
 package org.devtcg.five.server;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -30,6 +29,7 @@ import org.apache.http.impl.DefaultHttpResponseFactory;
 import org.apache.http.impl.DefaultHttpServerConnection;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.BasicHttpProcessor;
@@ -58,7 +58,7 @@ public abstract class AbstractHttpServer extends CancelableThread
 		mSocket = new ServerSocket();
 
 		mParams = new BasicHttpParams();
-		mParams.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 60000);
+		HttpConnectionParams.setSoTimeout(mParams, 60000);
 
 		setDaemon(true);
 		setPriority(MIN_PRIORITY);
