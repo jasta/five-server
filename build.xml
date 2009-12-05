@@ -48,7 +48,14 @@
 		<echo file="${gen.res}/org/devtcg/five/version.prop" append="false">${DSTAMP}</echo>
 	</target>
 
-	<target name="protoc" depends="init">
+	<target name="-checkprotoc">
+		<uptodate property="protoc.notRequired">
+			<srcfiles dir="${data}" includes="**/*.proto" />
+			<mapper type="glob" from="*.proto" to="${gen.src}/*.java" />
+		</uptodate>
+	</target>
+
+	<target name="protoc" unless="protoc.notRequired" depends="-checkprotoc, init">
 		<echo>Compiling protobufs into Java classes...</echo>
 		<apply executable="${protoc}" failonerror="true">
 			<arg value="--java_out=${gen.src}" />
