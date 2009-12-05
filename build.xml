@@ -43,6 +43,10 @@
 		<mkdir dir="${gen.res}"/>
 	</target>
 
+	<target name="testinit">
+		<mkdir dir="${reports.tests}" />
+	</target>
+
 	<target name="build-props" depends="init">
 		<mkdir dir="${gen.res}/org/devtcg/five" />
 		<echo file="${gen.res}/org/devtcg/five/version.prop" append="false">${DSTAMP}</echo>
@@ -84,14 +88,16 @@
 		</javac>
 	</target>
 
-	<target name="test" depends="compile.tests" description="run all unit tests">
+	<target name="test" depends="testinit, compile.tests" description="run all unit tests">
 		<junit printsummary="yes" fork="yes" haltonfailure="no">
+			<formatter type="plain" />
+
 			<classpath>
 				<path refid="compile.classpath" />
 				<pathelement location="${build.classes}" />
 				<pathelement location="${build.tests}" />
 			</classpath>
-			<batchtest>
+			<batchtest todir="${reports.tests}">
 				<fileset dir="${src.tests}">
 					<include name="**/*Test*.java" />
 					<exclude name="**/AllTests.java" />
@@ -156,5 +162,6 @@
 		<delete dir="${build}"/>
 		<delete dir="${dist}"/>
 		<delete dir="${gen}" />
+		<delete dir="${reports.tests}" />
 	</target>
 </project>
