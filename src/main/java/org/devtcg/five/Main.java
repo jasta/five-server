@@ -31,9 +31,10 @@ public class Main {
 
 	public static Display mDisplay;
 
-	private static HttpServer mServer;
-	private static FileCrawler mCrawler;
-	private static Docklet mDocklet;
+	/* Uhm, not at all sure what I was thinking with these fields... */
+	public static HttpServer mServer;
+	public static FileCrawler mCrawler;
+	public static Docklet mDocklet;
 
 	public static void main(String[] args) throws SQLException
 	{

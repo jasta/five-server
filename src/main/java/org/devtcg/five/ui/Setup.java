@@ -287,7 +287,7 @@ public class Setup
 			 * Start the docklet and core services (file crawler, http server,
 			 * etc).
 			 */
-			Docklet docklet = new Docklet(mWindow.getDisplay());
+			Docklet docklet = Main.mDocklet = new Docklet(mWindow.getDisplay());
 			Main.startServices();
 
 			mWindow.close();
