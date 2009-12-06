@@ -72,8 +72,8 @@ public class Setup
 	{
 		mWindow = new Shell(display);
 		mWindow.setText("Five server setup");
-		mWindow.setMinimumSize(500, 350);
-		mWindow.setSize(500, 350);
+		mWindow.setMinimumSize(510, 380);
+		mWindow.setSize(510, 380);
 
 		GridLayout mainLayout = new GridLayout(1, false);
 		mainLayout.marginWidth = 10;
@@ -154,12 +154,14 @@ public class Setup
 		browse.setText("Browse...");
 		browse.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, false, false));
 
-		newSectionLabel(group, "Server:");
+		newSectionLabel(group, "Network:");
 
 		Button useUPnP = mUseUPnP = new Button(group, SWT.CHECK);
 		useUPnP.setText("Use UPnP to automatically configure router");
 		useUPnP.setSelection(true);
 		useUPnP.setLayoutData(newSectionItemData(SWT.BEGINNING, SWT.BEGINNING, true, false));
+
+		newSectionLabel(group, "Server:");
 
 		Label passwordLabel = new Label(group, SWT.NONE);
 		passwordLabel.setText("Password: ");
@@ -185,7 +187,7 @@ public class Setup
 	private static GridData newSectionLabelGridData()
 	{
 		GridData data = new GridData(SWT.FILL, SWT.BEGINNING, true, false, 3, 1);
-		data.verticalIndent = 6;
+		data.verticalIndent = 10;
 		return data;
 	}
 
