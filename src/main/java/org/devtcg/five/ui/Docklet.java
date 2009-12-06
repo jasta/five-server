@@ -105,4 +105,19 @@ public class Docklet
 				display.sleep();
 		}
 	}
+
+	public void setToolTipText(final String text)
+	{
+		Display display = mTrayItem.getDisplay();
+		if (Thread.currentThread() == display.getThread())
+			mTrayItem.setToolTipText(text);
+		else
+		{
+			display.asyncExec(new Runnable() {
+					public void run() {
+						mTrayItem.setToolTipText(text);
+					}
+			});
+		}
+	}
 }

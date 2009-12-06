@@ -33,6 +33,7 @@ public class Main {
 
 	private static HttpServer mServer;
 	private static FileCrawler mCrawler;
+	private static Docklet mDocklet;
 
 	public static void main(String[] args) throws SQLException
 	{
@@ -46,7 +47,7 @@ public class Main {
 				Setup.show(mDisplay);
 			else
 			{
-				Docklet docklet = new Docklet(mDisplay);
+				Docklet docklet = mDocklet = new Docklet(mDisplay);
 				startServices();
 				docklet.open();
 			}
@@ -87,22 +88,32 @@ public class Main {
 
 	private static final FileCrawler.Listener mCrawlerListener = new FileCrawler.Listener()
 	{
+		private static final int TOOLTIP_UPDATE_INTERVAL = 1000;
+		private long mLastUpdateTime;
+
 		public void onFinished(boolean canceled)
 		{
-			if (LOG.isInfoEnabled())
-				LOG.info("onFinished: canceled=" + canceled);
+			mDocklet.setToolTipText("Five server is ready.");
 		}
 
 		public void onProgress(int scannedSoFar)
 		{
-			if (LOG.isInfoEnabled())
-				LOG.info("onProgress: " + scannedSoFar);
+			update(scannedSoFar);
 		}
 
 		public void onStart()
 		{
-			if (LOG.isInfoEnabled())
-				LOG.info("onStart");
+			update(0);
+		}
+
+		private void update(int scannedSoFar)
+		{
+			if (System.currentTimeMillis() - mLastUpdateTime >= TOOLTIP_UPDATE_INTERVAL)
+			{
+				mDocklet.setToolTipText("Scanning music collection (" +
+						scannedSoFar + " scanned so far)...");
+				mLastUpdateTime = System.currentTimeMillis();
+			}
 		}
 	};
 }
