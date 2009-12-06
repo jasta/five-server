@@ -47,6 +47,18 @@ public class DatabaseUtils {
 		}
 	}
 
+	public static int update(Connection conn, String sql, String... args)
+			throws SQLException
+	{
+		if (args == null || args.length == 0)
+			return conn.createStatement().executeUpdate(sql);
+		else
+		{
+			PreparedStatement stmt = createPreparedStatement(conn, sql, args);
+			return stmt.executeUpdate();
+		}
+	}
+
 	public static long getLastInsertId(Connection conn) throws SQLException
 	{
 		return longForQuery(conn, "CALL IDENTITY()");
@@ -154,6 +166,22 @@ public class DatabaseUtils {
 	{
 		String result = cursor.getResultSet().getString(cursor.getColumnIndex(columnName));
 		helper.bind(columnName, result);
+	}
+
+	/**
+	 * Implements semantics similar to INSERT OR REPLACE. Abstracted in this way
+	 * to support database engines that do not understand this syntax.
+	 */
+	public static void insertOrReplace(Connection conn, String table, String primaryKey,
+			String primaryKeyValue, String columnName, String value) throws SQLException
+	{
+		int rows = update(conn, "UPDATE " + table + " SET " + columnName + " = ? " +
+				"WHERE " + primaryKey + " = ?", value, primaryKeyValue);
+		if (rows == 0)
+		{
+			execute(conn, "INSERT INTO " + table + " (" + primaryKey + ", " + columnName + ") " +
+					"VALUES (?, ?)", primaryKeyValue, value);
+		}
 	}
 
 	public static class RowNotFoundException extends SQLException

@@ -43,9 +43,14 @@ public class Configuration
 	private static final int DEFAULT_PORT = 5545;
 
 	private static final String DB_NAME = "prefs";
-	private static final int DB_VERSION = 3;
+	private static final int DB_VERSION = 4;
+
+	private static final String TABLE = "config";
 
 	private final DatabaseOpenHelper mDatabase;
+
+	private static final String VALUE_QUERY =
+		"SELECT " + Columns.VALUE + " FROM " + TABLE + " WHERE " + Columns.KEY + " = ?";
 
 	static {
 		String home = System.getProperty("user.home");
@@ -84,14 +89,16 @@ public class Configuration
 
 	private interface Columns
 	{
+		public static final String KEY = "key";
+		public static final String VALUE = "value";
+	}
+
+	private interface Keys
+	{
 		public static final String FIRST_TIME = "first_time";
-
 		public static final String LIBRARY_PATH = "library_path";
-
 		public static final String PORT = "port";
-
 		public static final String PASSWORD = "password";
-
 		public static final String USE_UPNP = "use_upnp";
 	}
 
@@ -105,21 +112,15 @@ public class Configuration
 		@Override
 		public void onCreate(Connection conn) throws SQLException
 		{
-			DatabaseUtils.execute(conn, "CREATE TABLE configuration (" +
-				Columns.FIRST_TIME + " BOOLEAN NOT NULL, " +
-				Columns.LIBRARY_PATH + " VARCHAR DEFAULT NULL, " +
-				Columns.PORT + " INTEGER DEFAULT NULL, " +
-				Columns.PASSWORD + " VARCHAR DEFAULT NULL, " +
-				Columns.USE_UPNP + " BOOLEAN DEFAULT NULL" +
-				")");
-			DatabaseUtils.execute(conn, "INSERT INTO configuration (" +
-				Columns.FIRST_TIME +
-				") VALUES (?)", new String[] { "TRUE" });
+			DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
+					Columns.KEY + " VARCHAR PRIMARY KEY, " +
+					Columns.VALUE + " VARCHAR NOT NULL " +
+					")");
 		}
 
 		private void onDrop(Connection conn) throws SQLException
 		{
-			DatabaseUtils.execute(conn, "DROP TABLE configuration");
+			DatabaseUtils.execute(conn, "DROP TABLE " + TABLE);
 		}
 
 		@Override
@@ -128,7 +129,7 @@ public class Configuration
 		{
 			if (LOG.isInfoEnabled())
 			{
-				LOG.info("Upgrading table from version " + oldVersion +
+				LOG.info("Upgrading database from version " + oldVersion +
 					" to version " + newVersion);
 			}
 
@@ -163,44 +164,46 @@ public class Configuration
 	public synchronized void initFirstTime(String libraryPath, String password,
 			boolean useUPnP) throws SQLException
 	{
-		Connection conn = mDatabase.getConnection().getWrappedConnection();
+		Connection conn = getConnection();
 
-		DatabaseUtils.execute(conn, "UPDATE configuration SET " +
-				Columns.FIRST_TIME + " = ?, " +
-				Columns.LIBRARY_PATH + " = ?, " +
-				Columns.PASSWORD + " = ?, " +
-				Columns.USE_UPNP + " = ?",
-			"FALSE", libraryPath, password, useUPnP ? "TRUE" : "FALSE");
+		setValue(conn, Keys.FIRST_TIME, "FALSE");
+		setValue(conn, Keys.LIBRARY_PATH, libraryPath);
+		setValue(conn, Keys.PASSWORD, password);
+		setValue(conn, Keys.USE_UPNP, useUPnP ? "TRUE" : "FALSE");
+	}
+
+	private static void setValue(Connection conn, String key, String value) throws SQLException
+	{
+		DatabaseUtils.insertOrReplace(conn, TABLE, Columns.KEY, key, Columns.VALUE, value);
+	}
+
+	private Connection getConnection() throws SQLException
+	{
+		return mDatabase.getConnection().getWrappedConnection();
 	}
 
 	public synchronized boolean useUPnP() throws SQLException
 	{
-		return DatabaseUtils.booleanForQuery(mDatabase.getConnection().getWrappedConnection(), true,
-				"SELECT " + Columns.USE_UPNP + " FROM configuration");
+		return DatabaseUtils.booleanForQuery(getConnection(), true,
+				VALUE_QUERY, Keys.USE_UPNP);
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException
 	{
-		Connection conn = mDatabase.getConnection().getWrappedConnection();
-
-		return DatabaseUtils.booleanForQuery(conn, true,
-			"SELECT " + Columns.FIRST_TIME + " FROM configuration");
+		return DatabaseUtils.booleanForQuery(getConnection(), true,
+				VALUE_QUERY, Keys.FIRST_TIME);
 	}
 
 	public synchronized int getServerPort() throws SQLException
 	{
-		Connection conn = mDatabase.getConnection().getWrappedConnection();
-
-		return DatabaseUtils.integerForQuery(conn, DEFAULT_PORT,
-				"SELECT " + Columns.PORT + " FROM configuration");
+		return DatabaseUtils.integerForQuery(getConnection(), DEFAULT_PORT,
+				VALUE_QUERY, Keys.PORT);
 	}
 
 	public synchronized List<String> getLibraryPaths() throws SQLException
 	{
-		Connection conn = mDatabase.getConnection().getWrappedConnection();
-
-		String pathsValue = DatabaseUtils.stringForQuery(conn,
-			"SELECT " + Columns.LIBRARY_PATH + " FROM configuration");
+		String pathsValue = DatabaseUtils.stringForQuery(getConnection(),
+			VALUE_QUERY, new String[] { Keys.LIBRARY_PATH });
 
 		ArrayList<String> paths = new ArrayList<String>();
 
