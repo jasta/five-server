@@ -94,6 +94,9 @@ public class Main {
 
 		public void onFinished(boolean canceled)
 		{
+			if (LOG.isInfoEnabled())
+				LOG.info("File crawler finished, canceled=" + canceled);
+
 			mDocklet.setToolTipText("Five server is ready.");
 		}
 
@@ -104,6 +107,9 @@ public class Main {
 
 		public void onStart()
 		{
+			if (LOG.isInfoEnabled())
+				LOG.info("File crawler starting...");
+
 			update(0);
 		}
 
