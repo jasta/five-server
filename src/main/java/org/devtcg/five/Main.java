@@ -21,6 +21,7 @@ import org.apache.commons.logging.LogFactory;
 import org.devtcg.five.meta.FileCrawler;
 import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.server.HttpServer;
+import org.devtcg.five.server.UPnPService;
 import org.devtcg.five.ui.Docklet;
 import org.devtcg.five.ui.Setup;
 import org.eclipse.swt.widgets.Display;
@@ -62,6 +63,9 @@ public class Main {
 		try {
 			mServer = new HttpServer(config.getServerPort());
 			mServer.start();
+
+			if (config.useUPnP())
+				UPnPService.getInstance().enableUPnP();
 		} catch (Exception e) {
 			/* TODO */
 			throw new RuntimeException(e);

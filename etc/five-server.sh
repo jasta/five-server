@@ -15,6 +15,7 @@ libs="$libs:$base/libs/httpclient-4.0.jar"
 libs="$libs:$base/libs/httpcore-4.0.1.jar"
 libs="$libs:$base/libs/jcip-annotations-1.0.jar"
 libs="$libs:$base/libs/protobuf-2.0.3.jar"
-
+libs="$libs:$base/libs/commons-jxpath-1.1.jar"
+libs="$libs:$base/libs/sbbi-upnplib-1.0.4.jar"
 
 java -cp "$libs" org.devtcg.five.Main "$@"

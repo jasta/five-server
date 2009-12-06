@@ -17,9 +17,14 @@ package org.devtcg.five.ui;
 import java.io.File;
 import java.sql.SQLException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.devtcg.five.Main;
 import org.devtcg.five.persistence.Configuration;
+import org.devtcg.five.server.UPnPService;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.GridData;
@@ -38,6 +43,8 @@ import org.eclipse.swt.widgets.Text;
 
 public class Setup
 {
+	private static final Log LOG = LogFactory.getLog(Setup.class);
+
 	private Shell mWindow;
 	private Font mBigBoldFont;
 	private Font mBoldFont;
@@ -195,6 +202,19 @@ public class Setup
 		mBrowseButton.addListener(SWT.Selection, mBrowseClicked);
 		mOkButton.addListener(SWT.Selection, mOkClicked);
 		mCancelButton.addListener(SWT.Selection, mCancelClicked);
+
+		mUseUPnP.addListener(SWT.Selection, mUseUPnPClicked);
+
+		final UPnPService upnp = UPnPService.getInstance();
+		upnp.addMappingListener(mUPnPMappingListener);
+		upnp.enableUPnP();
+
+		mWindow.addDisposeListener(new DisposeListener() {
+			public void widgetDisposed(DisposeEvent e)
+			{
+				upnp.removeMappingListener(mUPnPMappingListener);
+			}
+		});
 	}
 
 	private final Listener mBrowseClicked = new Listener()
@@ -279,6 +299,44 @@ public class Setup
 		{
 			mWindow.close();
 		}
+	};
+
+	private final UPnPService.MappingListener mUPnPMappingListener = new UPnPService.MappingListener()
+	{
+		public void onMappingReady(boolean success)
+		{
+			if (LOG.isInfoEnabled())
+			{
+				if (success)
+					LOG.info("UPnP configuration succeeded");
+				else
+					LOG.info("UPnP configuration failure!");
+			}
+		}
+	};
+
+	private final Listener mUseUPnPClicked = new Listener()
+	{
+		public void handleEvent(Event e)
+		{
+			/*
+			 * Impose a slight delay to prevent resource exhaustion if the user
+			 * madly toggles.
+			 */
+			mWindow.getDisplay().timerExec(500, mToggleUPnPEvent);
+		}
+
+		private final Runnable mToggleUPnPEvent = new Runnable()
+		{
+			public void run()
+			{
+				/* We will be notified when the state changes to update the UI. */
+				if (mUseUPnP.getSelection())
+					UPnPService.getInstance().enableUPnP();
+				else
+					UPnPService.getInstance().disableUPnP();
+			}
+		};
 	};
 
 	public void open()

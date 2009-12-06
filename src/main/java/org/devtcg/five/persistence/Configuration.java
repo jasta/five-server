@@ -173,6 +173,12 @@ public class Configuration
 			"FALSE", libraryPath, password, useUPnP ? "TRUE" : "FALSE");
 	}
 
+	public synchronized boolean useUPnP() throws SQLException
+	{
+		return DatabaseUtils.booleanForQuery(mDatabase.getConnection().getWrappedConnection(), true,
+				"SELECT " + Columns.USE_UPNP + " FROM configuration");
+	}
+
 	public synchronized boolean isFirstTime() throws SQLException
 	{
 		Connection conn = mDatabase.getConnection().getWrappedConnection();
