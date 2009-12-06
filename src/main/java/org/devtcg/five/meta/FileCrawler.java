@@ -120,12 +120,20 @@ public class FileCrawler
 	private class CrawlerThread extends CancelableThread
 	{
 		/**
+		 * Maximum number of Last.fm request tasks that can be queued before
+		 * offers become blocking. This keeps memory usage reasonable for large
+		 * collections and also helps to throttle the disk scanner to not hammer
+		 * quite so hard.
+		 */
+		private static final int MAX_NETWORK_TASK_QUEUE_SIZE = 10;
+
+		/**
 		 * Used to execute network tasks which will collect extra meta data
 		 * than is available on the filesystem. Currently uses both MusicBrainz
 		 * and Last.fm.
 		 */
 		private final CancelableExecutor mNetworkMetaExecutor =
-			new CancelableExecutor(new LinkedBlockingQueue<FutureTask<?>>());
+			new CancelableExecutor(new LinkedBlockingQueue<FutureTask<?>>(MAX_NETWORK_TASK_QUEUE_SIZE));
 
 		private final MetaProvider mProvider;
 
