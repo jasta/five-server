@@ -43,7 +43,10 @@ public class CancelableExecutor
 			mWorker.start();
 		}
 
-		mQueue.offer(command);
+		try {
+			mQueue.put(command);
+		} catch (InterruptedException e) {
+		}
 	}
 
 	public synchronized void shutdownAndWait()
