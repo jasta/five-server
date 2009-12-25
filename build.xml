@@ -1,4 +1,4 @@
-<project name="five-server" default="dist-linux" basedir=".">
+<project name="five-server" default="dist" basedir=".">
 	<description>
 		Server component for the Five media system.
 	</description>
@@ -106,7 +106,51 @@
 		</junit>
 	</target>
 
-	<target name="dist" depends="dist-clean, compile" description="generate the distribution" >
+	<!-- Determine the default target platform.  Will be overridden if dist-*
+	     is executed directly. -->
+	<target name="guess-target">
+		<condition property="target.win32">
+			<os family="windows" />
+		</condition>
+		<condition property="target.macosx">
+			<and>
+				<os family="mac" />
+				<os family="unix" />
+			</and>
+		</condition>
+		<condition property="target.linux">
+			<os family="unix" name="Linux" />
+		</condition>
+		<fail message="Unknown platform, the dist target is not currently supported here.  Please consider sending patches!">
+			<condition>
+				<not>
+					<or>
+						<isset property="target.win32" />
+						<isset property="target.macosx" />
+						<isset property="target.linux" />
+					</or>
+				</not>
+			</condition>
+		</fail>
+	</target>
+
+	<!-- Meta target to figure out which actual platform distribution to
+	     make.  -->
+	<target name="dist" depends="-maybe-dist-win32,-maybe-dist-macosx,-maybe-dist-linux" description="generate the distribution for the current platform" />
+
+	<target name="-maybe-dist-win32" depends="guess-target" if="target.win32">
+		<antcall target="dist-win32" />
+	</target>
+
+	<target name="-maybe-dist-macosx" depends="guess-target" if="target.macosx">
+		<antcall target="dist-macosx" />
+	</target>
+
+	<target name="-maybe-dist-linux" depends="guess-target" if="target.linux">
+		<antcall target="dist-linux" />
+	</target>
+
+	<target name="-dist" depends="dist-clean, compile">
 		<!-- Create the distribution directories -->
 		<mkdir dir="${dist}/main" />
 		<mkdir dir="${dist}/libs" />
@@ -129,7 +173,7 @@
 		</jar>
 	</target>
 
-	<target name="dist-linux" depends="dist">
+	<target name="dist-linux" depends="-dist" description="generate the distribution for Linux (x86, x86_64)">
 		<copy tofile="${dist}/libs/x86/swt.jar" file="${libs}/swt-3.5.1/gtk-linux-x86/swt.jar" />
 		<copy tofile="${dist}/libs/x86_64/swt.jar" file="${libs}/swt-3.5.1/gtk-linux-x86_64/swt.jar" />
 
@@ -139,11 +183,11 @@
 		</exec>
 	</target>
 
-	<target name="dist-windows" depends="dist">
+	<target name="dist-win32" depends="-dist" description="generate the distribution for Windows (x86)">
 		<copy tofile="${dist}/libs/x86/swt.jar" file="${libs}/swt-3.5.1/win32-win32-x86/swt.jar" />
 	</target>
 
-	<target name="dist-macosx" depends="dist">
+	<target name="dist-macosx" depends="-dist" description="generate the distribution for Mac OS X (x86, ppc, x86_64)">
 		<copy tofile="${dist}/libs/x86/swt.jar" file="${libs}/swt-3.5.1/cocoa-macosx/swt.jar" />
 		<copy tofile="${dist}/libs/ppc/swt.jar" file="${libs}/swt-3.5.1/cocoa-macosx/swt.jar" />
 		<copy tofile="${dist}/libs/x86_64/swt.jar" file="${libs}/swt-3.5.1/cocoa-macosx-x86_64/swt.jar" />
