@@ -106,8 +106,8 @@
 		</junit>
 	</target>
 
-	<!-- Determine the default target platform.  Will be overridden if dist-*
-	     is executed directly. -->
+	<!-- Determine the default target platform.  Not used if dist-* is invoked
+	     directly from the command-line. -->
 	<target name="guess-target">
 		<condition property="target.win32">
 			<os family="windows" />
