@@ -24,6 +24,7 @@ import org.devtcg.five.meta.dao.PlaylistDAO;
 import org.devtcg.five.meta.dao.PlaylistSongDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.persistence.DatabaseOpenHelper;
+import org.devtcg.five.persistence.DatabaseUtils;
 import org.devtcg.five.persistence.LockableConnection;
 import org.devtcg.five.persistence.SyncableProvider;
 
@@ -107,6 +108,8 @@ public class MetaProvider extends SyncableProvider
 		@Override
 		public void onCreate(Connection conn) throws SQLException
 		{
+			DatabaseUtils.execute(conn, "SET IGNORECASE TRUE");
+
 			getArtistDAO().createTables(conn);
 			getAlbumDAO().createTables(conn);
 			getSongDAO().createTables(conn);
@@ -114,21 +117,21 @@ public class MetaProvider extends SyncableProvider
 			getPlaylistSongDAO().createTables(conn);
 		}
 
-		@Override
-		public void onUpgrade(Connection conn, int oldVersion, int newVersion)
-			throws SQLException
+		private void onDrop(Connection conn) throws SQLException
 		{
 			getArtistDAO().dropTables(conn);
 			getAlbumDAO().dropTables(conn);
 			getSongDAO().dropTables(conn);
 			getPlaylistDAO().dropTables(conn);
 			getPlaylistSongDAO().dropTables(conn);
+		}
 
-			getArtistDAO().createTables(conn);
-			getAlbumDAO().createTables(conn);
-			getSongDAO().createTables(conn);
-			getPlaylistDAO().createTables(conn);
-			getPlaylistSongDAO().createTables(conn);
+		@Override
+		public void onUpgrade(Connection conn, int oldVersion, int newVersion)
+			throws SQLException
+		{
+			onDrop(conn);
+			onCreate(conn);
 		}
 	}
 

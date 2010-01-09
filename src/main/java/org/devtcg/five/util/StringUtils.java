@@ -50,6 +50,8 @@ public class StringUtils
 	 */
 	public static String getNameMatch(String name)
 	{
+		name = name.trim();
+
 		if (name.startsWith("The "))
 			name = name.substring(4);
 		else if (name.startsWith("A "))
