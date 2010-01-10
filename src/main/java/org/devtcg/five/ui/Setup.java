@@ -14,7 +14,10 @@
 
 package org.devtcg.five.ui;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.sql.SQLException;
 
 import org.apache.commons.logging.Log;
@@ -64,8 +67,11 @@ public class Setup
 
 	public Setup(Display display)
 	{
-		createContents(display);
-		postCreate();
+		if (display != null)
+		{
+			createContents(display);
+			postCreate();
+		}
 	}
 
 	private void createContents(Display display)
@@ -234,42 +240,66 @@ public class Setup
 		}
 	};
 
-	private final Listener mOkClicked = new Listener()
+	private boolean assertValidPassword(String password)
 	{
-		private boolean checkPath()
+		if (password == null || password.length() == 0)
 		{
-			String pathString = mPathLabel.getText().trim();
-			if (pathString == null)
-				return false;
-
-			File path = new File(mPathLabel.getText().trim());
-
-			return (path.exists() && path.isDirectory());
+			showError("Missing password",
+					"You must provide a password to secure access to your media.  This password will be used when setting up the phone client.");
+			return false;
 		}
 
-		private void showError(String title, String message)
+		return true;
+	}
+
+	private boolean assertValidPath(String pathString)
+	{
+		boolean result = checkPath(pathString);
+		if (!result)
+		{
+			showError("Library path does not exist",
+					"The library path you've chosen does not exist or cannot be read.");
+		}
+
+		return result;
+	}
+
+	private boolean checkPath(String pathString)
+	{
+		if (pathString == null || pathString.length() == 0)
+			return false;
+
+		File path = new File(pathString);
+
+		return (path.exists() && path.isDirectory());
+	}
+
+	private void showError(String title, String message)
+	{
+		if (mWindow != null)
 		{
 			MessageBox box = new MessageBox(mWindow, SWT.ICON_ERROR | SWT.OK);
 			box.setText(title);
 			box.setMessage(message);
 			box.open();
 		}
+		else
+		{
+			System.out.println();
+			System.out.println("*** " + message);
+			System.out.println();
+		}
+	}
 
+	private final Listener mOkClicked = new Listener()
+	{
 		public void handleEvent(Event event)
 		{
-			if (!checkPath())
-			{
-				showError("Library path does not exist",
-						"The library path you've chosen does not exist or cannot be read.");
+			if (!assertValidPath(mPathLabel.getText().trim()))
 				return;
-			}
 
-			if (mPasswordText.getText().trim().length() == 0)
-			{
-				showError("Missing password",
-						"You must provide a password to secure access to your media.  This password will be used when setting up the phone client.");
+			if (!assertValidPassword(mPasswordText.getText().trim()))
 				return;
-			}
 
 			/*
 			 * Save the results to the config database, never showing this setup
@@ -343,6 +373,20 @@ public class Setup
 
 	public void open()
 	{
+		if (mWindow != null)
+			openSWT();
+		else
+		{
+			try {
+				openCLI();
+			} catch (IOException e) {
+				/* Ignore. */
+			}
+		}
+	}
+
+	private void openSWT()
+	{
 		mWindow.pack();
 		mWindow.open();
 
@@ -376,5 +420,56 @@ public class Setup
 		}
 
 		return mBoldFont;
+	}
+
+	private void openCLI() throws IOException
+	{
+		System.out.println();
+
+		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+
+		String library;
+		System.out.println("Five needs to know where your music is stored.  Please provide the absolute path to the root of your media library.  All files and directories under this path will be scanned.");
+		System.out.println();
+		do {
+			System.out.print("Library location: ");
+			library = in.readLine().trim();
+		} while (!assertValidPath(library));
+
+		System.out.println();
+
+		String password;
+		System.out.println("Access to your music library must be secured by password.  This password will be needed again when setting up the phone client later.");
+		System.out.println();
+		do {
+			System.out.print("Server password: ");
+			password = in.readLine().trim();
+		} while (!assertValidPassword(password));
+
+		System.out.println();
+
+		String useUPnP;
+		System.out.println("Since Five must be accessed externally, you will likely need to set up forwarding on port 5545 to the host running the server.  If you have UPnP support on your router, Five can do this for you automatically.  If you do not, or you say no here, please check with your Internet gateway device (usually a router of some kind) documentation to learn about port forwarding.");
+		System.out.println();
+		do {
+			System.out.print("Try to use UPnP? [Yn] ");
+			useUPnP = in.readLine().trim().toLowerCase();
+		} while (!useUPnP.startsWith("n") && !useUPnP.startsWith("y") && useUPnP.length() > 0);
+
+		try {
+			Configuration.getInstance().initFirstTime(library, password,
+					useUPnP.startsWith("n") ? false : true);
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+
+		System.out.println();
+		System.out.println("Congratulations, Five is now set up.");
+		System.out.println("Please wait while your media is scanned for the first time.  When complete, you can begin configuring the phone client.");
+		System.out.println();
+
+		Docklet docklet = Main.mDocklet = new Docklet(null);
+		Main.startServices();
+		docklet.open();
 	}
 }

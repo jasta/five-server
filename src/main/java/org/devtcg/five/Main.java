@@ -24,6 +24,7 @@ import org.devtcg.five.server.HttpServer;
 import org.devtcg.five.server.UPnPService;
 import org.devtcg.five.ui.Docklet;
 import org.devtcg.five.ui.Setup;
+import org.eclipse.swt.SWTError;
 import org.eclipse.swt.widgets.Display;
 
 public class Main {
@@ -38,12 +39,20 @@ public class Main {
 
 	public static void main(String[] args) throws SQLException
 	{
-		try {
-			Configuration config = Configuration.getInstance();
+		Configuration config = Configuration.getInstance();
 
+		try {
 			mDisplay = new Display();
 			Display.setAppName("five");
+		} catch (SWTError e) {
+			if (LOG.isDebugEnabled())
+				LOG.debug("Fatal display exception", e);
 
+			if (LOG.isWarnEnabled())
+				LOG.warn("Failed to initialize display, falling back to text-based UI.");
+		}
+
+		try {
 			if (config.isFirstTime())
 				Setup.show(mDisplay);
 			else
