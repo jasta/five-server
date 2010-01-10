@@ -194,7 +194,7 @@ public class SongDAO extends AbstractDAO
 	}
 
 	public Song newSong(File file, long artistId, long albumId, String title,
-		int bitrate, long length, int track)
+		long bitrate, long length, int track)
 	{
 		Song song = new Song();
 
@@ -221,7 +221,7 @@ public class SongDAO extends AbstractDAO
 		public String filename;
 		public String mimeType;
 		public long mtime;
-		public int bitrate;
+		public long bitrate;
 		public long filesize;
 		public long length;
 		public String title;

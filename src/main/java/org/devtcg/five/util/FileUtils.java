@@ -63,6 +63,10 @@ public class FileUtils
 			return "audio/mpeg";
 		else if (ext.equalsIgnoreCase("ogg"))
 			return "application/ogg";
+		else if (ext.equalsIgnoreCase("m4a") || ext.equalsIgnoreCase("m4p"))
+			return "audio/mp4a-latm";
+		else if (ext.equalsIgnoreCase("mp4"))
+			return "audio/mp4";
 
 		return null;
 	}

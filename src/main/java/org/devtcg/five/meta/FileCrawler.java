@@ -16,10 +16,8 @@ package org.devtcg.five.meta;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -41,11 +39,12 @@ import org.devtcg.five.util.CancelableExecutor;
 import org.devtcg.five.util.CancelableThread;
 import org.devtcg.five.util.FileUtils;
 import org.devtcg.five.util.StringUtils;
-
-import entagged.audioformats.AudioFile;
-import entagged.audioformats.AudioFileIO;
-import entagged.audioformats.Tag;
-import entagged.audioformats.exceptions.CannotReadException;
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.audio.AudioHeader;
+import org.jaudiotagger.audio.exceptions.CannotReadException;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
 
 public class FileCrawler
 {
@@ -170,6 +169,15 @@ public class FileCrawler
 			if (ext.equalsIgnoreCase("mp3") == true)
 				return true;
 
+			if (ext.equalsIgnoreCase("mp4") == true)
+				return true;
+
+			if (ext.equalsIgnoreCase("m4a") == true)
+				return true;
+
+			if (ext.equalsIgnoreCase("m4p") == true)
+				return true;
+
 //			if (ext.equalsIgnoreCase("ogg") == true)
 //				return true;
 //
@@ -177,9 +185,6 @@ public class FileCrawler
 //				return true;
 //
 //			if (ext.equalsIgnoreCase("flac") == true)
-//				return true;
-//
-//			if (ext.equalsIgnoreCase("m4a") == true)
 //				return true;
 
 			return false;
@@ -333,12 +338,8 @@ public class FileCrawler
 			return id;
 		}
 
-		private String stringTagValue(List<?> tagValue, String prefixHack, String defaultValue)
+		private String stringTagValue(String value, String prefixHack, String defaultValue)
 		{
-			if (tagValue == null || tagValue.size() == 0)
-				return defaultValue;
-
-			String value = tagValue.get(0).toString();
 			if (StringUtils.isEmpty(value)) {
 				return defaultValue;
 			}
@@ -354,9 +355,8 @@ public class FileCrawler
 				return value;
 		}
 
-		private int intTagValue(List<?> tagValue, int defaultValue)
+		private int intTagValue(String value, int defaultValue)
 		{
-			String value = stringTagValue(tagValue, null, null);
 			if (value == null)
 				return defaultValue;
 
@@ -446,13 +446,25 @@ public class FileCrawler
 			try {
 				AudioFile audioFile = AudioFileIO.read(file);
 				Tag tag = audioFile.getTag();
+				AudioHeader header = audioFile.getAudioHeader();
 
-				String artist = stringTagValue(tag.getArtist(), "ARTIST : ", "<Unknown>");
-				String album = stringTagValue(tag.getAlbum(), "ALBUM : ", "<Unknown>");
-				String title = stringTagValue(tag.getTitle(), "TITLE : ", null);
-				int bitrate = audioFile.getBitrate();
-				int length = audioFile.getLength();
-				int track = intTagValue(tag.getTrack(), -1);
+				String artist = stringTagValue(tag.getFirst(FieldKey.ARTIST), "ARTIST : ", "<Unknown>");
+				String album = stringTagValue(tag.getFirst(FieldKey.ALBUM), "ALBUM : ", "<Unknown>");
+				String title = stringTagValue(tag.getFirst(FieldKey.TITLE), "TITLE : ", null);
+				long bitrate = header.getBitRateAsNumber();
+				int length = header.getTrackLength();
+
+				/*
+				 * Hmm, this library appears to have very unusual bugs when
+				 * reading TRACK tags. Any exception the library throws here is
+				 * ignored.
+				 */
+				int track;
+				try {
+					track = intTagValue(tag.getFirst(FieldKey.TRACK), -1);
+				} catch (Exception e) {
+					track = -1;
+				}
 
 				/* Title is actually the only property we strictly require. */
 				if (title == null)
@@ -468,9 +480,9 @@ public class FileCrawler
 					return mProvider.getSongDAO().update(existingEntry.getId(), song);
 				else
 					return mProvider.getSongDAO().insert(song);
-			} catch (CannotReadException e) {
+			} catch (Exception e) {
 				if (LOG.isWarnEnabled())
-					LOG.warn(file + ": unable to parse song: " + e);
+					LOG.warn(file + ": unable to parse song: " + e, e);
 
 				return -1;
 			}
