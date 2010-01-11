@@ -312,7 +312,6 @@ public class HttpServer extends AbstractHttpServer
 				return false;
 
 			String value = authHead.getValue();
-			System.out.println("Authorize header: " + value);
 
 			String requiredScheme = "Basic ";
 
@@ -333,14 +332,8 @@ public class HttpServer extends AbstractHttpServer
 			if (userpass.length < 2)
 				throw new RuntimeException("Failed to parse authorize header: " + value);
 
-			System.out.println("Received credentials: user=" + userpass[0] +
-					", pass=" + userpass[1]);
-
 			if (!STANDARD_USER.equals(userpass[0]))
 				return false;
-
-			System.out.println("Accepting credentials: user=" + userpass[0] +
-					", pass=" + userpass[1]);
 
 			return true;
 		}
