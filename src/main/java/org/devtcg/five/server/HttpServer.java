@@ -43,6 +43,7 @@ import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.meta.MetaSyncAdapter;
 import org.devtcg.five.meta.dao.AlbumDAO;
 import org.devtcg.five.meta.dao.ArtistDAO;
+import org.devtcg.five.meta.dao.ImageDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.meta.data.Protos;
 import org.devtcg.five.persistence.DatabaseUtils;
@@ -233,50 +234,34 @@ public class HttpServer extends AbstractHttpServer
 		{
 			String uri = request.getRequestLine().getUri();
 			String[] segments = uri.split("/");
-			if (segments.length < 4)
+			if (segments.length < 5)
 				return false;
 
-			boolean thumb = segments[1].equals("imageThumb");
 			String feedType = segments[2];
+			String[] dimensions = segments[3].split("x", 2);
 
+			int width;
+			int height;
 			long id;
 			try {
-				id = Long.parseLong(segments[3]);
+				width = Integer.parseInt(dimensions[0]);
+				height = Integer.parseInt(dimensions[1]);
+				id = Long.parseLong(segments[4]);
 			} catch (NumberFormatException e) {
 				return false;
 			}
 
-			byte[] data = null;
-
-			if (feedType.equals("artists"))
-			{
-				ArtistDAO.ArtistEntryDAO artist =
-					MetaProvider.getInstance().getArtistDAO().getArtist(id);
-
-				if (thumb)
-					data = artist.getPhotoThumb();
-				else
-					data = artist.getPhoto();
-			}
-			else if (feedType.equals("albums"))
-			{
-				AlbumDAO.AlbumEntryDAO album =
-					MetaProvider.getInstance().getAlbumDAO().getAlbum(id);
-
-				if (thumb)
-					data = album.getArtworkThumb();
-				else
-					data = album.getArtwork();
-			}
+			ImageDAO.ImageEntryDAO entry = MetaProvider.getInstance().getImageDAO()
+					.requestImageAtSize(feedType, id, width, height);
 
 			/* Either bogus URI or no photo to transmit, return 404 Not Found. */
-			if (data == null)
+			if (entry == null)
 			{
 				System.out.println("No data available for: " + uri);
 				return false;
 			}
 
-			response.setEntity(new ByteArrayEntity(data));
+			response.setEntity(new ByteArrayEntity(entry.getData()));
 			response.setStatusCode(HttpStatus.SC_OK);
 
 			return true;
@@ -307,7 +292,7 @@ public class HttpServer extends AbstractHttpServer
 					handled = handleFeed(request, response, context);
 				else if (requestUriString.startsWith("/songs/"))
 					handled = handleSong(request, response, context);
-				else if (requestUriString.startsWith("/imageThumb/") || requestUriString.startsWith("/image/"))
+				else if (requestUriString.startsWith("/image/"))
 					handled = handleImage(request, response, context);
 				else if (requestUriString.equals("/info"))
 					handled = handleInfo(request, response, context);

@@ -83,7 +83,7 @@ public class SongDAO extends AbstractDAO
 	}
 
 	@Override
-	protected String getTable()
+	public String getTable()
 	{
 		return TABLE;
 	}

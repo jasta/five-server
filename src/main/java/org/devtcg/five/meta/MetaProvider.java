@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import org.devtcg.five.content.SyncAdapter;
 import org.devtcg.five.meta.dao.AlbumDAO;
 import org.devtcg.five.meta.dao.ArtistDAO;
+import org.devtcg.five.meta.dao.ImageDAO;
 import org.devtcg.five.meta.dao.PlaylistDAO;
 import org.devtcg.five.meta.dao.PlaylistSongDAO;
 import org.devtcg.five.meta.dao.SongDAO;
@@ -33,7 +34,7 @@ public class MetaProvider extends SyncableProvider
 	private final DatabaseOpenHelper mHelper;
 
 	private static final String DB_NAME = "meta";
-	private static final int DB_VERSION = 12;
+	private static final int DB_VERSION = 13;
 
 	private static final MetaProvider INSTANCE = new MetaProvider(DB_NAME);
 
@@ -42,6 +43,7 @@ public class MetaProvider extends SyncableProvider
 	private SongDAO mSongDAO;
 	private PlaylistDAO mPlaylistDAO;
 	private PlaylistSongDAO mPlaylistSongDAO;
+	private ImageDAO mImageDAO;
 
 	protected MetaProvider(String name)
 	{
@@ -98,6 +100,14 @@ public class MetaProvider extends SyncableProvider
 		return mPlaylistSongDAO;
 	}
 
+	public synchronized ImageDAO getImageDAO()
+	{
+		if (mImageDAO == null)
+			mImageDAO = new ImageDAO(this);
+
+		return mImageDAO;
+	}
+
 	private class OpenHelper extends DatabaseOpenHelper
 	{
 		public OpenHelper(String name, int version)
@@ -115,6 +125,7 @@ public class MetaProvider extends SyncableProvider
 			getSongDAO().createTables(conn);
 			getPlaylistDAO().createTables(conn);
 			getPlaylistSongDAO().createTables(conn);
+			getImageDAO().createTables(conn);
 		}
 
 		private void onDrop(Connection conn) throws SQLException
@@ -124,6 +135,7 @@ public class MetaProvider extends SyncableProvider
 			getSongDAO().dropTables(conn);
 			getPlaylistDAO().dropTables(conn);
 			getPlaylistSongDAO().dropTables(conn);
+			getImageDAO().dropTables(conn);
 		}
 
 		@Override

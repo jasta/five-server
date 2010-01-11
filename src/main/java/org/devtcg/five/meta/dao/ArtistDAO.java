@@ -43,9 +43,6 @@ public class ArtistDAO extends AbstractDAO
 		 *  punctuation, etc. */
 		public static final String NAME_MATCH = "name_match";
 
-		public static final String PHOTO = "photo";
-		public static final String PHOTO_THUMB = "photo_thumb";
-
 		/** Timestamp this row was created (i.e. when Five first noticed). */
 		public static final String DISCOVERY_DATE = "discovery_date";
 	}
@@ -56,7 +53,7 @@ public class ArtistDAO extends AbstractDAO
 	}
 
 	@Override
-	protected String getTable()
+	public String getTable()
 	{
 		return TABLE;
 	}
@@ -71,8 +68,6 @@ public class ArtistDAO extends AbstractDAO
 			Columns.MBID + " CHAR(36), " +
 			Columns.NAME + " VARCHAR NOT NULL, " +
 			Columns.NAME_MATCH + " VARCHAR NOT NULL, " +
-			Columns.PHOTO + " BINARY, " +
-			Columns.PHOTO_THUMB + " BINARY, " +
 			Columns.DISCOVERY_DATE + " BIGINT, " +
 			"UNIQUE (" + Columns.NAME_MATCH + ") " +
 		")");
@@ -117,11 +112,9 @@ public class ArtistDAO extends AbstractDAO
 		return helper.insert();
 	}
 
-	public void updateMbidAndPhoto(long id, String mbid, byte[] imageData, byte[] thumbData)
-		throws SQLException
+	public void updateMbid(long id, String mbid) throws SQLException
 	{
-		updateMbidAndImage(id, Columns.MBID, Columns.PHOTO, Columns.PHOTO_THUMB,
-			mbid, imageData, thumbData);
+		updateColumn(id, Columns.MBID, mbid);
 	}
 
 	public static class Artist
@@ -143,8 +136,6 @@ public class ArtistDAO extends AbstractDAO
 		private final int mColumnName;
 		private final int mColumnNameMatch;
 		private final int mColumnDiscoveryDate;
-		private final int mColumnPhoto;
-		private final int mColumnPhotoThumb;
 
 		private static final Creator<ArtistEntryDAO> CREATOR = new Creator<ArtistEntryDAO>()
 		{
@@ -177,8 +168,6 @@ public class ArtistDAO extends AbstractDAO
 			mColumnName = map.getColumnIndex(Columns.NAME);
 			mColumnNameMatch = map.getColumnIndex(Columns.NAME_MATCH);
 			mColumnDiscoveryDate = map.getColumnIndex(Columns.DISCOVERY_DATE);
-			mColumnPhoto = map.getColumnIndex(Columns.PHOTO);
-			mColumnPhotoThumb = map.getColumnIndex(Columns.PHOTO_THUMB);
 		}
 
 		public long getId() throws SQLException
@@ -209,16 +198,6 @@ public class ArtistDAO extends AbstractDAO
 		public long getDiscoveryDate() throws SQLException
 		{
 			return mSet.getLong(mColumnDiscoveryDate);
-		}
-
-		public byte[] getPhoto() throws SQLException
-		{
-			return mSet.getBytes(mColumnPhoto);
-		}
-
-		public byte[] getPhotoThumb() throws SQLException
-		{
-			return mSet.getBytes(mColumnPhotoThumb);
 		}
 
 		public String getContentType()

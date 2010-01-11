@@ -62,14 +62,11 @@ public class LastfmAlbumArtworkTask extends LastfmMetaTask
 		AlbumData data = mXmlHandler.data;
 
 		byte[] imageData = null;
-		byte[] thumbData = null;
 
 		if (data.imageUrl != null)
 		{
 			try {
 				imageData = downloadImage(data.imageUrl);
-				if (imageData != null)
-					thumbData = ImageUtils.getScaledInstance(imageData, THUMB_WIDTH, THUMB_HEIGHT);
 			} catch (IOException e) {
 				if (LOG.isWarnEnabled())
 					LOG.warn("Failed to download artist photo at " + data.imageUrl);
@@ -80,9 +77,13 @@ public class LastfmAlbumArtworkTask extends LastfmMetaTask
 			return;
 
 		try {
-			if (data.mbid != null || imageData != null)
-				mProvider.getAlbumDAO().updateMbidAndArtwork(mId, data.mbid, imageData, thumbData);
+			if (data.mbid != null)
+				mProvider.getAlbumDAO().updateMbid(mId, data.mbid);
+
+			if (imageData != null)
+				mProvider.getImageDAO().insert(mProvider.getAlbumDAO().getTable(), mId, imageData);
 		} catch (SQLException e) {
+		} catch (IOException e) {
 		}
 	}
 

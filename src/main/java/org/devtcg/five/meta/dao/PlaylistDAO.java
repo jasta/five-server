@@ -50,7 +50,7 @@ public class PlaylistDAO extends AbstractDAO
 	}
 
 	@Override
-	protected String getTable()
+	public String getTable()
 	{
 		return TABLE;
 	}
