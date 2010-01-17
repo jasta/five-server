@@ -261,8 +261,12 @@ public class HttpServer extends AbstractHttpServer
 				return false;
 			}
 
-			response.setEntity(new ByteArrayEntity(entry.getData()));
-			response.setStatusCode(HttpStatus.SC_OK);
+			try {
+				response.setEntity(new ByteArrayEntity(entry.getData()));
+				response.setStatusCode(HttpStatus.SC_OK);
+			} finally {
+				entry.close();
+			}
 
 			return true;
 		}
