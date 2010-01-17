@@ -92,6 +92,8 @@ public abstract class LastfmMetaTask implements Callable<Object>
 
 		if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK)
 		{
+			if (LOG.isWarnEnabled())
+				LOG.warn(getMethodUrl() + " replied " + response.getStatusLine());
 			response.getEntity().consumeContent();
 			return;
 		}
@@ -115,12 +117,15 @@ public abstract class LastfmMetaTask implements Callable<Object>
 
 	protected byte[] downloadImage(String url) throws IOException
 	{
+		System.out.println("Fetching " + url);
 		HttpGet request = new HttpGet(url);
 
 		HttpResponse response = mClient.execute(request);
 
 		if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK)
 		{
+			if (LOG.isWarnEnabled())
+				LOG.warn(url + " replied " + response.getStatusLine());
 			response.getEntity().consumeContent();
 			return null;
 		}
