@@ -209,7 +209,7 @@ public class Configuration
 
 		if (pathsValue != null)
 		{
-			for (String path: pathsValue.split(":"))
+			for (String path: pathsValue.split(File.pathSeparator))
 				paths.add(path);
 		}
 
