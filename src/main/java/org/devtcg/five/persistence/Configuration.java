@@ -15,6 +15,7 @@
 package org.devtcg.five.persistence;
 
 import java.io.File;
+import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -158,17 +159,28 @@ public class Configuration
 		return USER_HOME.getAbsolutePath();
 	}
 
+	public static String sha1Hash(String data)
+	{
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-1");
+			md.update(data.getBytes("UTF-8"));
+			return StringUtils.byteArrayToHexString(md.digest());
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	/**
 	 * Initializes configured settings after the setup wizard exists successfully.
 	 */
-	public synchronized void initFirstTime(String libraryPath, String password,
+	public synchronized void initFirstTime(String libraryPath, String plaintextPassword,
 			boolean useUPnP) throws SQLException
 	{
 		Connection conn = getConnection();
 
 		setValue(conn, Keys.FIRST_TIME, "FALSE");
 		setValue(conn, Keys.LIBRARY_PATH, libraryPath);
-		setValue(conn, Keys.PASSWORD, password);
+		setValue(conn, Keys.PASSWORD, sha1Hash(plaintextPassword));
 		setValue(conn, Keys.USE_UPNP, useUPnP ? "TRUE" : "FALSE");
 	}
 
