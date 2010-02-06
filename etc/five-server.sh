@@ -18,4 +18,11 @@ libs="$libs:$base/libs/protobuf-2.0.3.jar"
 libs="$libs:$base/libs/commons-jxpath-1.1.jar"
 libs="$libs:$base/libs/sbbi-upnplib-1.0.4.jar"
 
-java -Xmx512M -Djava.util.logging.config.file=logging.properties -cp "$libs" org.devtcg.five.Main "$@"
+# Mac OS X needs an additional arg for reasons totally beyond me.
+if [ $(uname) = "Darwin" ]; then
+	os_opts="-XstartOnFirstThread"
+else
+	os_opts=
+fi
+
+java -Xmx512M $os_opts -Djava.util.logging.config.file=logging.properties -cp "$libs" org.devtcg.five.Main "$@"
