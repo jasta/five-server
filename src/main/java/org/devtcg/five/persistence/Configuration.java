@@ -94,7 +94,7 @@ public class Configuration
 		public static final String VALUE = "value";
 	}
 
-	private interface Keys
+	public interface Keys
 	{
 		public static final String FIRST_TIME = "first_time";
 		public static final String LIBRARY_PATH = "library_path";
@@ -194,10 +194,31 @@ public class Configuration
 		return mDatabase.getConnection().getWrappedConnection();
 	}
 
+	public synchronized String getHashedPassword() throws SQLException
+	{
+		return DatabaseUtils.stringForQuery(getConnection(),
+				VALUE_QUERY, new String[] { Keys.PASSWORD });
+	}
+
+	public synchronized void setPassword(String plaintextPassword) throws SQLException
+	{
+		setHashedPassword(sha1Hash(plaintextPassword));
+	}
+
+	public synchronized void setHashedPassword(String hashedPassword) throws SQLException
+	{
+		setValue(getConnection(), Keys.PASSWORD, hashedPassword);
+	}
+
 	public synchronized boolean useUPnP() throws SQLException
 	{
 		return DatabaseUtils.booleanForQuery(getConnection(), true,
 				VALUE_QUERY, Keys.USE_UPNP);
+	}
+
+	public synchronized void setUseUPnP(boolean useUPnP) throws SQLException
+	{
+		setValue(getConnection(), Keys.USE_UPNP, useUPnP ? "TRUE" : "FALSE");
 	}
 
 	public synchronized boolean isFirstTime() throws SQLException
@@ -210,6 +231,11 @@ public class Configuration
 	{
 		return DatabaseUtils.integerForQuery(getConnection(), DEFAULT_PORT,
 				VALUE_QUERY, Keys.PORT);
+	}
+
+	public synchronized void setServerPort(int port) throws SQLException
+	{
+		setValue(getConnection(), Keys.PORT, String.valueOf(port));
 	}
 
 	public synchronized List<String> getLibraryPaths() throws SQLException
@@ -226,5 +252,19 @@ public class Configuration
 		}
 
 		return paths;
+	}
+
+	public synchronized void setLibraryPaths(List<String> paths) throws SQLException
+	{
+		if (paths == null || paths.size() == 0)
+			throw new IllegalArgumentException("paths must not be null or empty");
+
+		StringBuilder string = new StringBuilder();
+		for (String path: paths)
+			string.append(path).append(File.pathSeparator);
+
+		string.setLength(string.length() - File.pathSeparator.length());
+
+		setValue(getConnection(), Keys.LIBRARY_PATH, string.toString());
 	}
 }

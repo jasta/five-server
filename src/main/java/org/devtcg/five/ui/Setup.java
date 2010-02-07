@@ -25,11 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.devtcg.five.Main;
 import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.server.UPnPService;
+import org.devtcg.five.ui.util.FontUtil;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -49,8 +48,7 @@ public class Setup
 	private static final Log LOG = LogFactory.getLog(Setup.class);
 
 	private Shell mWindow;
-	private Font mBigBoldFont;
-	private Font mBoldFont;
+	private FontUtil mFontUtil;
 
 	private Button mUseUPnP;
 	private Text mPathLabel;
@@ -81,6 +79,8 @@ public class Setup
 		mWindow.setMinimumSize(510, 380);
 		mWindow.setSize(510, 380);
 
+		mFontUtil = new FontUtil(mWindow);
+
 		GridLayout mainLayout = new GridLayout(1, false);
 		mainLayout.marginWidth = 10;
 		mainLayout.marginHeight = 10;
@@ -89,7 +89,7 @@ public class Setup
 
 		Label title = new Label(mWindow, SWT.NONE);
 		title.setText("Five media distribution setup");
-		title.setFont(getBiggerBoldFont());
+		title.setFont(mFontUtil.getBiggerBoldFont());
 		title.setData(new GridData(SWT.FILL, SWT.BEGINNING, true, false));
 
 		Label desc = new Label(mWindow, SWT.WRAP);
@@ -185,7 +185,7 @@ public class Setup
 	{
 		Label label = new Label(parent, SWT.NONE);
 		label.setText(text);
-		label.setFont(getBoldFont());
+		label.setFont(mFontUtil.getBoldFont());
 		label.setLayoutData(newSectionLabelGridData());
 		return label;
 	}
@@ -396,30 +396,6 @@ public class Setup
 			if (!display.readAndDispatch())
 				display.sleep();
 		}
-	}
-
-	private Font getBiggerBoldFont()
-	{
-		if (mBigBoldFont == null)
-		{
-			FontData[] data = mWindow.getFont().getFontData();
-			mBigBoldFont = new Font(mWindow.getDisplay(), data[0].getName(),
-					data[0].getHeight() + 1, SWT.BOLD);
-		}
-
-		return mBigBoldFont;
-	}
-
-	private Font getBoldFont()
-	{
-		if (mBoldFont == null)
-		{
-			FontData[] data = mWindow.getFont().getFontData();
-			mBoldFont = new Font(mWindow.getDisplay(), data[0].getName(),
-					data[0].getHeight(), SWT.BOLD);
-		}
-
-		return mBoldFont;
 	}
 
 	private void openCLI() throws IOException

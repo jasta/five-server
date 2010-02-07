@@ -87,7 +87,7 @@ public class Docklet
 	{
 		public void handleEvent(Event event)
 		{
-			System.out.println("preferences clicked");
+			Preferences.show(mTrayItem.getDisplay());
 		}
 	};
 

@@ -48,7 +48,7 @@ public abstract class AbstractHttpServer extends CancelableThread
 	protected final HashSet<WorkerThread> mWorkers =
 		new HashSet<WorkerThread>();
 
-	private final ServerSocket mSocket;
+	private ServerSocket mSocket;
 
 	protected final HttpParams mParams;
 	private HttpRequestHandler mReqHandler;
@@ -67,6 +67,20 @@ public abstract class AbstractHttpServer extends CancelableThread
 	public AbstractHttpServer(int port) throws IOException
 	{
 		this();
+		bind(port);
+	}
+
+	private synchronized ServerSocket getSocket()
+	{
+		return mSocket;
+	}
+
+	public void rebind(int port) throws IOException
+	{
+		synchronized(this) {
+			mSocket.close();
+			mSocket = new ServerSocket();
+		}
 		bind(port);
 	}
 
@@ -105,7 +119,7 @@ public abstract class AbstractHttpServer extends CancelableThread
 		interrupt();
 
 		try {
-			mSocket.close();
+			getSocket().close();
 		} catch (IOException e) {
 			if (LOG.isErrorEnabled())
 				LOG.error("Error shutting down HTTP server", e);
@@ -125,7 +139,7 @@ public abstract class AbstractHttpServer extends CancelableThread
 		while (Thread.interrupted() == false)
 		{
 			try {
-				Socket sock = mSocket.accept();
+				Socket sock = getSocket().accept();
 				DefaultHttpServerConnection conn =
 					new DefaultHttpServerConnection();
 
