@@ -9,7 +9,7 @@
 	<classpathentry kind="lib" path="libs/httpcore-4.0.1.jar"/>
 	<classpathentry kind="lib" path="libs/hsqldb-1.8.0.10.jar" sourcepath="/home/jasta/software/hsqldb-1.8.0.10/src"/>
 	<classpathentry kind="lib" path="libs/protobuf-2.0.3.jar"/>
-	<classpathentry kind="lib" path="libs/swt-3.5.1/gtk-linux-x86_64/swt.jar"/>
+	<classpathentry kind="lib" path="libs/swt-3.5.1/gtk-linux-x86_64/swt.jar" sourcepath="/home/jasta/software/swt-3.5.1-gtk-linux-x86_64/src.zip"/>
 	<classpathentry kind="lib" path="libs/sbbi-upnplib-1.0.4.jar" sourcepath="/home/jasta/software/sbbi-upnplib-src-1.0.4/src"/>
 	<classpathentry kind="lib" path="libs/commons-jxpath-1.1.jar"/>
 	<classpathentry kind="lib" path="libs/jaudiotagger-2.0.1.jar"/>
