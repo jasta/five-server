@@ -77,14 +77,15 @@ public class Main {
 
 			if (config.useUPnP())
 				UPnPService.getInstance().enableUPnP();
+
+			mCrawler = FileCrawler.getInstance();
+			mCrawler.setListener(mCrawlerListener);
+			mCrawler.startScan();
+			mCrawler.updateRescanInterval();
 		} catch (Exception e) {
 			/* TODO */
 			throw new RuntimeException(e);
 		}
-
-		mCrawler = FileCrawler.getInstance();
-		mCrawler.setListener(mCrawlerListener);
-		mCrawler.startScan();
 	}
 
 	private static void stopServices()

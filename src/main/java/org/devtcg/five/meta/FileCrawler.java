@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.devtcg.five.Main;
 import org.devtcg.five.meta.dao.AlbumDAO;
 import org.devtcg.five.meta.dao.ArtistDAO;
 import org.devtcg.five.meta.dao.PlaylistDAO;
@@ -35,6 +36,7 @@ import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.meta.dao.PlaylistDAO.Playlist;
 import org.devtcg.five.meta.dao.PlaylistDAO.PlaylistEntryDAO;
 import org.devtcg.five.persistence.Configuration;
+import org.devtcg.five.util.AbstractTimer;
 import org.devtcg.five.util.CancelableExecutor;
 import org.devtcg.five.util.CancelableThread;
 import org.devtcg.five.util.FileUtils;
@@ -56,6 +58,9 @@ public class FileCrawler
 	private List<String> mPaths;
 
 	private Listener mListener;
+
+	private final AbstractTimer mRescanTimer =
+		AbstractTimer.newInstance("RescanTimer", Main.mDisplay);
 
 	public interface Listener
 	{
@@ -90,6 +95,37 @@ public class FileCrawler
 	{
 		mListener = l;
 	}
+
+	public void updateRescanInterval() throws SQLException
+	{
+		long rescanInterval = Configuration.getInstance().getRescanInterval();
+
+		if (LOG.isInfoEnabled())
+			LOG.info("Updating rescan interval to " + rescanInterval + " msec");
+
+		mRescanTimer.schedule(mRescanRunnable, rescanInterval);
+	}
+
+	private final Runnable mRescanRunnable = new Runnable()
+	{
+		public void run()
+		{
+			synchronized(FileCrawler.this) {
+				if (!isActive())
+				{
+					if (LOG.isInfoEnabled())
+						LOG.info("Auto-rescan starting...");
+
+					startScan();
+				}
+				else
+				{
+					if (LOG.isInfoEnabled())
+						LOG.info("Scan already in progress, skipping auto-rescan.");
+				}
+			}
+		}
+	};
 
 	public synchronized void startScan()
 	{

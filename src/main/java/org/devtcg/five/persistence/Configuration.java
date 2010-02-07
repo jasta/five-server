@@ -42,6 +42,7 @@ public class Configuration
 	private static final File DATABASE_DIR;
 
 	private static final int DEFAULT_PORT = 5545;
+	private static final int DEFAULT_RESCAN_INTERVAL = 24 * 60 * 60 * 1000;
 
 	private static final String DB_NAME = "prefs";
 	private static final int DB_VERSION = 4;
@@ -101,6 +102,7 @@ public class Configuration
 		public static final String PORT = "port";
 		public static final String PASSWORD = "password";
 		public static final String USE_UPNP = "use_upnp";
+		public static final String RESCAN_INTERVAL = "rescan_interval";
 	}
 
 	private static class OpenHelper extends DatabaseOpenHelper
@@ -182,6 +184,8 @@ public class Configuration
 		setValue(conn, Keys.LIBRARY_PATH, libraryPath);
 		setValue(conn, Keys.PASSWORD, sha1Hash(plaintextPassword));
 		setValue(conn, Keys.USE_UPNP, useUPnP ? "TRUE" : "FALSE");
+
+		/* Let other options remain defaulted... */
 	}
 
 	private static void setValue(Connection conn, String key, String value) throws SQLException
@@ -231,6 +235,20 @@ public class Configuration
 	{
 		return DatabaseUtils.integerForQuery(getConnection(), DEFAULT_PORT,
 				VALUE_QUERY, Keys.PORT);
+	}
+
+	/**
+	 * Gets the rescan interval in milliseconds.
+	 */
+	public synchronized long getRescanInterval() throws SQLException
+	{
+		return DatabaseUtils.longForQuery(getConnection(), DEFAULT_RESCAN_INTERVAL,
+				VALUE_QUERY, Keys.RESCAN_INTERVAL);
+	}
+
+	public synchronized void setRescanInterval(long rescanInterval) throws SQLException
+	{
+		setValue(getConnection(), Keys.RESCAN_INTERVAL, String.valueOf(rescanInterval));
 	}
 
 	public synchronized void setServerPort(int port) throws SQLException

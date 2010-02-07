@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.devtcg.five.Main;
+import org.devtcg.five.meta.FileCrawler;
 import org.devtcg.five.persistence.Configuration;
 import org.devtcg.five.server.UPnPService;
 import org.devtcg.five.ui.util.FontUtil;
@@ -368,10 +369,7 @@ public class Preferences
 				}
 			}
 
-			if (errors.size() > 0)
-				return errors;
-			else
-				return null;
+			return errors;
 		}
 	}
 
@@ -380,6 +378,17 @@ public class Preferences
 		public Combo location;
 		public Combo refresh;
 		public Button useFsNotify;
+
+		private final String[] mRefreshStrings = new String[] {
+			"Every 2 minutes", "Every 12 hours", "Every day", "Twice a week", "Once a week", "Once a month",
+		};
+
+		private static final long mOneDayInMsec = 24 * 60 * 60 * 1000;
+
+		private final long[] mRefreshIntervals = new long[] {
+			2 * 60 * 1000, mOneDayInMsec / 2, mOneDayInMsec, (long)(mOneDayInMsec * 3.5), mOneDayInMsec * 7,
+			(long)(mOneDayInMsec * 7 * (52f / 12f))
+		};
 
 		public LibraryTab(TabFolder tabs)
 		{
@@ -403,10 +412,10 @@ public class Preferences
 			newSectionLabel(box, "Auto-refresh:");
 
 			refresh = new Combo (box, SWT.READ_ONLY | SWT.DROP_DOWN);
-			refresh.setItems (new String [] { "Every day", "Every week", "C", "D" });
-			refresh.setText("Every day");
+			refresh.setItems(mRefreshStrings);
+			refresh.setText(mRefreshStrings[2]);
 			refresh.setLayoutData(new GridDataHelper(SWT.BEGINNING, SWT.BEGINNING, false, false)
-					.setHorizontalIndent(6).setWidthHint(120).getGridData());
+					.setHorizontalIndent(6).setWidthHint(200).getGridData());
 
 			useFsNotify = new Button(box, SWT.CHECK);
 			useFsNotify.setText("Watch filesystem for changes (NOT YET IMPLEMENTED)");
@@ -418,6 +427,20 @@ public class Preferences
 
 		public void bindData() {}
 		public void postCreate() {}
-		public List<FieldError> commit() throws SQLException { return null; }
+
+		public List<FieldError> commit() throws SQLException
+		{
+			Configuration config = Configuration.getInstance();
+
+			long refreshInterval = mRefreshIntervals[refresh.getSelectionIndex()];
+
+			if (config.getRescanInterval() != refreshInterval)
+			{
+				config.setRescanInterval(refreshInterval);
+				FileCrawler.getInstance().updateRescanInterval();
+			}
+
+			return null;
+		}
 	}
 }
