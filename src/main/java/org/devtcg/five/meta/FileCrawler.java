@@ -124,6 +124,12 @@ public class FileCrawler
 						LOG.info("Scan already in progress, skipping auto-rescan.");
 				}
 			}
+
+			try {
+				updateRescanInterval();
+			} catch (SQLException e) {
+				throw new RuntimeException(e);
+			}
 		}
 	};
 
