@@ -14,6 +14,9 @@
 
 package org.devtcg.five.ui;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.devtcg.five.meta.FileCrawler;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
@@ -27,6 +30,8 @@ import org.eclipse.swt.widgets.TrayItem;
 
 public class Docklet
 {
+	private static final Log LOG = LogFactory.getLog(Docklet.class);
+
 	private TrayItem mTrayItem;
 	private Menu mMenu;
 
@@ -54,6 +59,8 @@ public class Docklet
 			mMenu = new Menu(new Shell(display), SWT.POP_UP);
 			addMenuItem(mMenu, "Preferences", mPreferencesClicked);
 			addMenuItem(mMenu, "About", null);
+			new MenuItem(mMenu, SWT.SEPARATOR);
+			addMenuItem(mMenu, "Rescan now", mRescanClicked);
 			new MenuItem(mMenu, SWT.SEPARATOR);
 			addMenuItem(mMenu, "Quit", mQuitClicked);
 		}
@@ -88,6 +95,29 @@ public class Docklet
 		public void handleEvent(Event event)
 		{
 			Preferences.show(mTrayItem.getDisplay());
+		}
+	};
+
+	private final Listener mRescanClicked = new Listener()
+	{
+		public void handleEvent(Event event)
+		{
+			FileCrawler crawler = FileCrawler.getInstance();
+
+			synchronized(crawler) {
+				if (crawler.isActive())
+				{
+					if (LOG.isInfoEnabled())
+						LOG.info("Scanner is already active, not starting again.");
+				}
+				else
+				{
+					if (LOG.isInfoEnabled())
+						LOG.info("Starting scan...");
+
+					crawler.startScan();
+				}
+			}
 		}
 	};
 
