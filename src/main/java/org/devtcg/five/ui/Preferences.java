@@ -413,7 +413,6 @@ public class Preferences
 
 			refresh = new Combo (box, SWT.READ_ONLY | SWT.DROP_DOWN);
 			refresh.setItems(mRefreshStrings);
-			refresh.setText(mRefreshStrings[2]);
 			refresh.setLayoutData(new GridDataHelper(SWT.BEGINNING, SWT.BEGINNING, false, false)
 					.setHorizontalIndent(6).setWidthHint(200).getGridData());
 
@@ -425,7 +424,27 @@ public class Preferences
 			tab.setControl(box);
 		}
 
-		public void bindData() {}
+		private String getRefreshString(long refreshInterval)
+		{
+			int n = mRefreshIntervals.length;
+			for (int i = 0; i < n; i++)
+			{
+				if (mRefreshIntervals[i] == refreshInterval)
+					return mRefreshStrings[i];
+			}
+
+			if (LOG.isWarnEnabled())
+				LOG.warn("Arbitrary refresh interval of " + refreshInterval + " cannot be represented");
+
+			return mRefreshStrings[2];
+		}
+
+		public void bindData() throws SQLException
+		{
+			Configuration config = Configuration.getInstance();
+			refresh.setText(getRefreshString(config.getRescanInterval()));
+		}
+
 		public void postCreate() {}
 
 		public List<FieldError> commit() throws SQLException
