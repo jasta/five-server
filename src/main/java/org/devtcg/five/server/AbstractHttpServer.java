@@ -28,7 +28,6 @@ import org.apache.http.impl.DefaultConnectionReuseStrategy;
 import org.apache.http.impl.DefaultHttpResponseFactory;
 import org.apache.http.impl.DefaultHttpServerConnection;
 import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.BasicHttpContext;
@@ -43,7 +42,7 @@ import org.devtcg.five.util.CancelableThread;
 
 public abstract class AbstractHttpServer extends CancelableThread
 {
-	/* package */ static final Log LOG = LogFactory.getLog("HttpServer");
+	/* package */ static final Log LOG = LogFactory.getLog(AbstractHttpServer.class);
 
 	protected final HashSet<WorkerThread> mWorkers =
 		new HashSet<WorkerThread>();
@@ -204,7 +203,6 @@ public abstract class AbstractHttpServer extends CancelableThread
 				while (isInterrupted() == false && mConn.isOpen())
 					mService.handleRequest(mConn, ctx);
 			} catch (Exception e) {
-				e.printStackTrace();
 				if (LOG.isDebugEnabled())
 					LOG.debug("HTTP client worker disrupted", e);
 			} finally {
