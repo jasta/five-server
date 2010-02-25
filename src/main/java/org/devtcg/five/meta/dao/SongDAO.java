@@ -15,20 +15,13 @@
 package org.devtcg.five.meta.dao;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 import org.devtcg.five.content.AbstractTableMerger;
 import org.devtcg.five.content.ColumnsMap;
 import org.devtcg.five.content.SyncableEntryDAO;
-import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO;
-import org.devtcg.five.meta.dao.AbstractDAO.AbstractSyncableEntryDAO.Creator;
-import org.devtcg.five.meta.dao.AlbumDAO.AlbumEntryDAO;
-import org.devtcg.five.meta.dao.AlbumDAO.Columns;
 import org.devtcg.five.meta.data.Protos;
 import org.devtcg.five.meta.data.Protos.Record;
 import org.devtcg.five.persistence.DatabaseUtils;
@@ -39,9 +32,10 @@ import org.devtcg.five.util.FileUtils;
 
 public class SongDAO extends AbstractDAO
 {
-	private static final String TABLE = "songs";
+	static final String TABLE = "songs";
+	private static final String DELETED_TABLE = "songs_deleted";
 
-	private interface Columns extends BaseColumns
+	interface Columns extends BaseColumns
 	{
 		/** MusicBrainz ID. */
 		public static final String MBID = "mbid";
@@ -89,6 +83,12 @@ public class SongDAO extends AbstractDAO
 	}
 
 	@Override
+	public String getDeletedTable()
+	{
+		return DELETED_TABLE;
+	}
+
+	@Override
 	public void createTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
@@ -109,12 +109,8 @@ public class SongDAO extends AbstractDAO
 			Columns.MARK + " BOOLEAN DEFAULT 0, " +
 			"UNIQUE (" + Columns.FILENAME + ") " +
 		")");
-	}
 
-	@Override
-	public void dropTables(Connection conn) throws SQLException
-	{
-		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
+		createDeletedTable(conn);
 	}
 
 	public void markAll() throws SQLException
@@ -128,6 +124,14 @@ public class SongDAO extends AbstractDAO
 		DatabaseUtils.execute(mProvider.getConnection().getWrappedConnection(),
 			"UPDATE " + TABLE + " SET " + Columns.MARK + " = 0 " +
 			"WHERE " + Columns._ID + " = ?", String.valueOf(_id));
+	}
+
+	public SongEntryDAO getMarked() throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
+				"SELECT * FROM " + TABLE + " WHERE " + Columns.MARK + " = 1");
+
+		return new SongEntryDAO(set);
 	}
 
 	public SongEntryDAO getSong(long id) throws SQLException
@@ -262,9 +266,9 @@ public class SongDAO extends AbstractDAO
 			return CREATOR.newInstance(set);
 		}
 
-		private SongEntryDAO(SyncableProvider provider) throws SQLException
+		private SongEntryDAO(SyncableProvider provider, String table) throws SQLException
 		{
-			this(getResultSet(provider, TABLE));
+			this(getResultSet(provider, table));
 		}
 
 		private SongEntryDAO(ResultSet set) throws SQLException
@@ -390,13 +394,19 @@ public class SongDAO extends AbstractDAO
 	{
 		public TableMerger()
 		{
-			super((SyncableProvider)getProvider(), TABLE);
+			super((SyncableProvider)getProvider(), TABLE, DELETED_TABLE);
 		}
 
 		@Override
 		public SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs) throws SQLException
 		{
-			return new SongEntryDAO(clientDiffs);
+			return new SongEntryDAO(clientDiffs, TABLE);
+		}
+
+		@Override
+		public SyncableEntryDAO getDeletedEntryDAO(SyncableProvider clientDiffs) throws SQLException
+		{
+			return new SongEntryDAO(clientDiffs, DELETED_TABLE);
 		}
 	}
 

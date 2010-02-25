@@ -314,15 +314,13 @@ public class FileCrawler
 
 				/*
 				 * Couldn't parse any of the playlist entries, or it contained
-				 * none.
+				 * none. If the playlist existed but was empty we will simply
+				 * leave it unmarked and clean it up after the crawler finishes.
+				 * If it never existed and this file is a new file with nothing
+				 * in it, just ignore it completely.
 				 */
 				if (playlistBuf.songs.isEmpty())
-				{
-					if (existingPlaylist == null)
-						return -1;
-					else
-						throw new UnsupportedOperationException("Need to delete, but not implemented.");
-				}
+					return -1;
 
 				long id;
 				if (existingPlaylist == null)
@@ -572,20 +570,64 @@ public class FileCrawler
 			}
 		}
 
+		private void markAll() throws SQLException
+		{
+			mProvider.getSongDAO().markAll();
+			mProvider.getPlaylistDAO().markAll();
+		}
+
 		private void deleteAllMarked() throws SQLException
 		{
-			/* TODO */
+			PlaylistDAO.PlaylistEntryDAO markedPlaylists = mProvider.getPlaylistDAO().getMarked();
+			while (markedPlaylists.moveToNext())
+			{
+				if (LOG.isDebugEnabled())
+					LOG.debug("Detected removal of " + markedPlaylists.getFilename());
+
+				long playlistId = markedPlaylists.getId();
+				mProvider.getPlaylistSongDAO().deleteByPlaylist(playlistId);
+				mProvider.getPlaylistDAO().delete(playlistId);
+			}
+
+			SongDAO.SongEntryDAO markedSongs = mProvider.getSongDAO().getMarked();
+			while (markedSongs.moveToNext())
+			{
+				if (LOG.isDebugEnabled())
+					LOG.debug("Detected removal of " + markedSongs.getFilename());
+
+				mProvider.getSongDAO().delete(markedSongs.getId());
+			}
+
+			AlbumDAO.AlbumEntryDAO emptyAlbums = mProvider.getAlbumDAO().getEmptyAlbums();
+			while (emptyAlbums.moveToNext())
+			{
+				if (LOG.isDebugEnabled())
+					LOG.debug("No songs left in album " + emptyAlbums.getId() + " (" + emptyAlbums.getName() + "), deleting");
+
+				mProvider.getAlbumDAO().delete(emptyAlbums.getId());
+			}
+
+			ArtistDAO.ArtistEntryDAO emptyArtists = mProvider.getArtistDAO().getEmptyArtists();
+			while (emptyArtists.moveToNext())
+			{
+				if (LOG.isDebugEnabled())
+					LOG.debug("No albums or songs left for artist " + emptyArtists.getId() + " (" + emptyArtists.getName() + "), deleting");
+
+				mProvider.getArtistDAO().delete(emptyArtists.getId());
+			}
 		}
 
 		private void crawlImpl() throws SQLException
 		{
-			mProvider.getSongDAO().markAll();
+			/* Mark all entries with a 1:1 mapping on disk. */
+			markAll();
 
 			for (String path : mPaths)
 				traverse(new File(path));
 
 			/* Delete every entry that hasn't been unmarked during traversal. */
-			deleteAllMarked();
+			if (!hasCanceled())
+				deleteAllMarked();
 
 			/* Will work whether we were canceled or not. */
 			mNetworkMetaExecutor.shutdownAndWait();

@@ -31,6 +31,7 @@ public abstract class AbstractTableMerger
 {
 	private final SyncableProvider mDb;
 	private final String mTable;
+	private final String mDeletesTable;
 
 	public interface SyncableColumns
 	{
@@ -47,15 +48,21 @@ public abstract class AbstractTableMerger
 		public static final String _SYNC_ID = "_sync_id";
 	}
 
-	public AbstractTableMerger(SyncableProvider mainDb, String table)
+	public AbstractTableMerger(SyncableProvider mainDb, String table, String deletesTable)
 	{
 		mDb = mainDb;
 		mTable = table;
+		mDeletesTable = deletesTable;
 	}
 
 	public String getTableName()
 	{
 		return mTable;
+	}
+
+	public String getDeletesTableName()
+	{
+		return mDeletesTable;
 	}
 
 //	public void merge(SyncableProvider serverDiffs, SyncableProvider clientDiffs)
@@ -253,16 +260,10 @@ public abstract class AbstractTableMerger
 //			String.valueOf(syncId), String.valueOf(id));
 //	}
 
-	public void findLocalChanges(SyncableProvider clientDiffs, long lastModified)
-		throws SQLException
+	private void copyRows(SyncableProvider clientDiffs, String table, ResultSet set) throws SQLException
 	{
-		/* Find all local changes the other side hasn't seen before. */
-		ResultSet set = DatabaseUtils.executeForResult(mDb.getConnection().getWrappedConnection(),
-			"SELECT * FROM " + mTable + " WHERE " + SyncableColumns._SYNC_TIME + " > " +
-				lastModified, (String[])null);
-
 		InsertHelper inserter = new InsertHelper(clientDiffs.getConnection().getWrappedConnection(),
-			mTable, SyncableColumns._ID);
+				table, SyncableColumns._ID);
 
 		try {
 			int columnCount = set.getMetaData().getColumnCount();
@@ -290,8 +291,35 @@ public abstract class AbstractTableMerger
 		}
 	}
 
+	/**
+	 * Collect all local changes since the supplied last modified timestamp,
+	 * storing the rows in <code>clientDiffs</code>. Includes both deleted
+	 * records from the deletes table as well as main records.
+	 */
+	public void findLocalChanges(SyncableProvider clientDiffs, long lastModified)
+		throws SQLException
+	{
+		if (mDeletesTable != null && lastModified > 0)
+		{
+			/* Find all local deletes the other side hasn't seen before. */
+			copyRows(clientDiffs, mDeletesTable,
+					DatabaseUtils.executeForResult(mDb.getConnection().getWrappedConnection(),
+					"SELECT * FROM " + mDeletesTable + " WHERE " + SyncableColumns._SYNC_TIME + " > " +
+							lastModified, (String[])null));
+		}
+
+		/* Find all local inserts or updates the other side hasn't seen before. */
+		copyRows(clientDiffs, mTable,
+				DatabaseUtils.executeForResult(mDb.getConnection().getWrappedConnection(),
+				"SELECT * FROM " + mTable + " WHERE " + SyncableColumns._SYNC_TIME + " > " +
+						lastModified, (String[])null));
+	}
+
 	public abstract SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs)
-		throws SQLException;
+			throws SQLException;
+
+	public abstract SyncableEntryDAO getDeletedEntryDAO(SyncableProvider clientDiffs)
+			throws SQLException;
 
 //	public abstract long insertRow(Provider main, Cursor diffsCursor) throws SQLException;
 //	public abstract void deleteRow(Provider main, Cursor diffsCursor) throws SQLException;

@@ -31,6 +31,7 @@ import org.devtcg.five.util.StringUtils;
 public class ArtistDAO extends AbstractDAO
 {
 	private static final String TABLE = "artists";
+	private static final String DELETED_TABLE = "artists_deleted";
 
 	public interface Columns extends BaseColumns
 	{
@@ -59,6 +60,12 @@ public class ArtistDAO extends AbstractDAO
 	}
 
 	@Override
+	public String getDeletedTable()
+	{
+		return DELETED_TABLE;
+	}
+
+	@Override
 	public void createTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
@@ -71,12 +78,8 @@ public class ArtistDAO extends AbstractDAO
 			Columns.DISCOVERY_DATE + " BIGINT, " +
 			"UNIQUE (" + Columns.NAME_MATCH + ") " +
 		")");
-	}
 
-	@Override
-	public void dropTables(Connection conn) throws SQLException
-	{
-		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
+		createDeletedTable(conn);
 	}
 
 	public ArtistEntryDAO getArtist(long id) throws SQLException
@@ -95,6 +98,22 @@ public class ArtistDAO extends AbstractDAO
 			name);
 
 		return ArtistEntryDAO.newInstance(set);
+	}
+
+	public ArtistEntryDAO getEmptyArtists() throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
+				"SELECT " + fullColumn("*") + " FROM " + TABLE +
+				" LEFT JOIN " + AlbumDAO.TABLE + " ON " +
+				fullColumn(AlbumDAO.TABLE, AlbumDAO.Columns.ARTIST_ID) + " = " +
+					fullColumn(Columns._ID) +
+				" LEFT JOIN " + SongDAO.TABLE + " ON " +
+				fullColumn(SongDAO.TABLE, SongDAO.Columns.ARTIST_ID) + " = " +
+					fullColumn(Columns._ID) +
+				" WHERE " + fullColumn(AlbumDAO.TABLE, AlbumDAO.Columns._ID) + " IS NULL AND " +
+				fullColumn(SongDAO.TABLE, SongDAO.Columns._ID) + " IS NULL");
+
+		return new ArtistEntryDAO(set);
 	}
 
 	public long insert(String name) throws SQLException
@@ -151,9 +170,9 @@ public class ArtistDAO extends AbstractDAO
 			return CREATOR.newInstance(set);
 		}
 
-		private ArtistEntryDAO(SyncableProvider provider) throws SQLException
+		private ArtistEntryDAO(SyncableProvider provider, String table) throws SQLException
 		{
-			this(getResultSet(provider, TABLE));
+			this(getResultSet(provider, table));
 		}
 
 		private ArtistEntryDAO(ResultSet set) throws SQLException
@@ -235,13 +254,19 @@ public class ArtistDAO extends AbstractDAO
 	{
 		public TableMerger()
 		{
-			super((SyncableProvider)getProvider(), TABLE);
+			super((SyncableProvider)getProvider(), TABLE, DELETED_TABLE);
 		}
 
 		@Override
 		public SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs) throws SQLException
 		{
-			return new ArtistEntryDAO(clientDiffs);
+			return new ArtistEntryDAO(clientDiffs, TABLE);
+		}
+
+		@Override
+		public SyncableEntryDAO getDeletedEntryDAO(SyncableProvider clientDiffs) throws SQLException
+		{
+			return new ArtistEntryDAO(clientDiffs, DELETED_TABLE);
 		}
 	}
 

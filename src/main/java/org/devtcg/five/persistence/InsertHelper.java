@@ -20,6 +20,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 
+/**
+ * Prepared statement helper for inserting rows into a database table.
+ */
 public class InsertHelper
 {
 	private final Connection mConnection;

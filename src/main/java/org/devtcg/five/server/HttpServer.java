@@ -41,8 +41,6 @@ import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.content.AbstractTableMerger.SyncableColumns;
 import org.devtcg.five.meta.MetaProvider;
 import org.devtcg.five.meta.MetaSyncAdapter;
-import org.devtcg.five.meta.dao.AlbumDAO;
-import org.devtcg.five.meta.dao.ArtistDAO;
 import org.devtcg.five.meta.dao.ImageDAO;
 import org.devtcg.five.meta.dao.SongDAO;
 import org.devtcg.five.meta.data.Protos;
@@ -70,8 +68,8 @@ public class HttpServer extends AbstractHttpServer
 		private static final String CONTENT_RANGE_HEADER = "Content-Range";
 		private static final String LAST_MODIFIED_HEADER = "X-Last-Modified";
 		private static final String MODIFIED_SINCE_HEADER = "X-Modified-Since";
-		private static final String CURSOR_POSITION_HEADER = "X-Cursor-Position";
-		private static final String CURSOR_COUNT_HEADER = "X-Cursor-Count";
+		private static final String INSERT_OR_UPDATE_COUNT_HEADER = "X-Records-Modified";
+		private static final String DELETE_COUNT_HEADER = "X-Records-Deleted";
 		private static final String FIVE_VERSION_HEADER = "X-Five-Version";
 
 		private boolean handleFeed(HttpRequest request, HttpResponse response,
@@ -109,9 +107,13 @@ public class HttpServer extends AbstractHttpServer
 				SyncableProvider clientDiffs = MetaProvider.getTemporaryInstance();
 				merger.findLocalChanges(clientDiffs, modifiedSince);
 
-				int entityCount = DatabaseUtils.integerForQuery(
+				int insertOrUpdateCount = DatabaseUtils.integerForQuery(
 						clientDiffs.getConnection().getWrappedConnection(), 0,
 						"SELECT COUNT(*) FROM " + merger.getTableName(), (String[])null);
+
+				int deleteCount = DatabaseUtils.integerForQuery(
+						clientDiffs.getConnection().getWrappedConnection(), 0,
+						"SELECT COUNT(*) FROM " + merger.getDeletesTableName(), (String[])null);
 
 				long lastModified = DatabaseUtils.longForQuery(
 						clientDiffs.getConnection().getWrappedConnection(), 0,
@@ -119,11 +121,13 @@ public class HttpServer extends AbstractHttpServer
 								merger.getTableName(), (String[])null);
 
 				SyncableEntryDAO entryDAO = merger.getEntryDAO(clientDiffs);
+				SyncableEntryDAO deletedEntryDAO = merger.getDeletedEntryDAO(clientDiffs);
 
-				response.setHeader(CURSOR_POSITION_HEADER, String.valueOf(0));
-				response.setHeader(CURSOR_COUNT_HEADER, String.valueOf(entityCount));
+				response.setHeader(INSERT_OR_UPDATE_COUNT_HEADER, String.valueOf(insertOrUpdateCount));
+				response.setHeader(DELETE_COUNT_HEADER, String.valueOf(deleteCount));
 				response.setHeader(LAST_MODIFIED_HEADER, String.valueOf(lastModified));
-				response.setEntity(new EntryDAOEntity(clientDiffs, entryDAO, entityCount));
+				response.setEntity(new EntryDAOEntity(clientDiffs, entryDAO, insertOrUpdateCount,
+						deletedEntryDAO, deleteCount));
 				response.setStatusCode(HttpStatus.SC_OK);
 
 				return true;
@@ -429,13 +433,18 @@ public class HttpServer extends AbstractHttpServer
 		private final SyncableProvider mProvider;
 		private final SyncableEntryDAO mDAO;
 		private final int mCount;
+		private final SyncableEntryDAO mDeletedDAO;
+		private final int mDeletesCount;
 
-		public EntryDAOEntity(SyncableProvider provider, SyncableEntryDAO dao, int entityCount)
+		public EntryDAOEntity(SyncableProvider provider, SyncableEntryDAO dao, int entityCount,
+				SyncableEntryDAO deletedDao, int deletesCount)
 		{
 			super();
 			mProvider = provider;
 			mDAO = dao;
 			mCount = entityCount;
+			mDeletedDAO = deletedDao;
+			mDeletesCount = deletesCount;
 			setContentType(dao.getContentType());
 		}
 
@@ -464,17 +473,33 @@ public class HttpServer extends AbstractHttpServer
 			return true;
 		}
 
+		private void exhaustEntries(CodedOutputStream stream, SyncableEntryDAO dao, int count,
+				boolean sendIdOnly) throws IOException, SQLException
+		{
+			try {
+				stream.writeRawLittleEndian32(count);
+				while (dao.moveToNext())
+				{
+					if (sendIdOnly)
+						stream.writeRawLittleEndian64(dao.getId());
+					else
+					{
+						Protos.Record entry = dao.getEntry();
+						stream.writeRawLittleEndian32(entry.getSerializedSize());
+						entry.writeTo(stream);
+					}
+				}
+			} finally {
+				dao.close();
+			}
+		}
+
 		public void writeTo(OutputStream out) throws IOException
 		{
 			CodedOutputStream stream = CodedOutputStream.newInstance(out);
 			try {
-				stream.writeRawLittleEndian32(mCount);
-				while (mDAO.moveToNext())
-				{
-					Protos.Record entry = mDAO.getEntry();
-					stream.writeRawLittleEndian32(entry.getSerializedSize());
-					entry.writeTo(stream);
-				}
+				exhaustEntries(stream, mDeletedDAO, mDeletesCount, true);
+				exhaustEntries(stream, mDAO, mCount, false);
 			} catch (SQLException e) {
 				throw new RuntimeException(e);
 			} finally {
@@ -482,7 +507,6 @@ public class HttpServer extends AbstractHttpServer
 					stream.flush();
 				} catch (IOException e) {}
 				try {
-					mDAO.close();
 					mProvider.close();
 				} catch (SQLException e) {
 					if (LOG.isWarnEnabled())

@@ -30,6 +30,7 @@ import org.devtcg.five.persistence.SyncableProvider;
 public class PlaylistSongDAO extends AbstractDAO
 {
 	private static final String TABLE = "playlist_songs";
+	private static final String DELETED_TABLE = "playlist_songs_deleted";
 
 	public interface Columns extends BaseColumns
 	{
@@ -47,6 +48,12 @@ public class PlaylistSongDAO extends AbstractDAO
 	public String getTable()
 	{
 		return TABLE;
+	}
+
+	@Override
+	public String getDeletedTable()
+	{
+		return DELETED_TABLE;
 	}
 
 	@Override
@@ -69,12 +76,8 @@ public class PlaylistSongDAO extends AbstractDAO
 				Columns.POSITION + ", " +
 				Columns.SONG_ID +
 			")");
-	}
 
-	@Override
-	public void dropTables(Connection conn) throws SQLException
-	{
-		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
+		createDeletedTable(conn);
 	}
 
 	public long getSongAtPosition(long playlistId, int position) throws SQLException
@@ -86,15 +89,19 @@ public class PlaylistSongDAO extends AbstractDAO
 			String.valueOf(playlistId), String.valueOf(position));
 	}
 
+	public PlaylistSongEntryDAO getSongsByPlaylist(long playlistId) throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
+				"SELECT * FROM " + TABLE + " WHERE " + Columns.PLAYLIST_ID + " = ?");
+
+		return new PlaylistSongEntryDAO(set);
+	}
+
 	public void deleteByPlaylist(long playlistId) throws SQLException
 	{
-		int numSongs = DatabaseUtils.integerForQuery(mProvider.getConnection().getWrappedConnection(),
-			0,
-			"SELECT COUNT(*) FROM " + TABLE + " WHERE " + Columns.PLAYLIST_ID + " = ?",
-			String.valueOf(playlistId));
-
-		if (numSongs > 0)
-			throw new UnsupportedOperationException("Delete is not supported yet!");
+		PlaylistSongEntryDAO songs = getSongsByPlaylist(playlistId);
+		while (songs.moveToNext())
+			delete(songs.getId());
 	}
 
 	public long insert(long playlistId, int position, long songId) throws SQLException
@@ -134,9 +141,9 @@ public class PlaylistSongDAO extends AbstractDAO
 			return CREATOR.newInstance(set);
 		}
 
-		private PlaylistSongEntryDAO(SyncableProvider provider) throws SQLException
+		private PlaylistSongEntryDAO(SyncableProvider provider, String table) throws SQLException
 		{
-			this(getResultSet(provider, TABLE));
+			this(getResultSet(provider, table));
 		}
 
 		private PlaylistSongEntryDAO(ResultSet set) throws SQLException
@@ -210,13 +217,20 @@ public class PlaylistSongDAO extends AbstractDAO
 	{
 		public TableMerger()
 		{
-			super((SyncableProvider)getProvider(), TABLE);
+			super((SyncableProvider)getProvider(), TABLE, DELETED_TABLE);
 		}
 
 		@Override
 		public SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs) throws SQLException
 		{
-			return new PlaylistSongEntryDAO(clientDiffs);
+			return new PlaylistSongEntryDAO(clientDiffs, TABLE);
+		}
+
+		@Override
+		public SyncableEntryDAO getDeletedEntryDAO(SyncableProvider clientDiffs)
+				throws SQLException
+		{
+			return new PlaylistSongEntryDAO(clientDiffs, DELETED_TABLE);
 		}
 	}
 }

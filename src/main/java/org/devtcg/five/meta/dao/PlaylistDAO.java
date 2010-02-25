@@ -32,6 +32,7 @@ import org.devtcg.five.persistence.SyncableProvider;
 public class PlaylistDAO extends AbstractDAO
 {
 	private static final String TABLE = "playlists";
+	private static final String DELETED_TABLE = "playlists_deleted";
 
 	public interface Columns extends BaseColumns
 	{
@@ -56,6 +57,12 @@ public class PlaylistDAO extends AbstractDAO
 	}
 
 	@Override
+	public String getDeletedTable()
+	{
+		return DELETED_TABLE;
+	}
+
+	@Override
 	public void createTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
@@ -68,12 +75,8 @@ public class PlaylistDAO extends AbstractDAO
 			Columns.MARK + " BOOLEAN DEFAULT 0, " +
 			"UNIQUE (" + Columns.FILENAME + ") " +
 		")");
-	}
 
-	@Override
-	public void dropTables(Connection conn) throws SQLException
-	{
-		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
+		createDeletedTable(conn);
 	}
 
 	public PlaylistEntryDAO getPlaylist(long id) throws SQLException
@@ -94,6 +97,14 @@ public class PlaylistDAO extends AbstractDAO
 		return PlaylistEntryDAO.newInstance(set);
 	}
 
+	public PlaylistEntryDAO getMarked() throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
+				"SELECT * FROM " + TABLE + " WHERE " + Columns.MARK + " = 1");
+
+		return new PlaylistEntryDAO(set);
+	}
+
 	public long insert(String filename, String name, long createdDate) throws SQLException
 	{
 		InsertHelper helper = getInsertHelper();
@@ -108,6 +119,12 @@ public class PlaylistDAO extends AbstractDAO
 		helper.bind(Columns.MARK, 0);
 
 		return helper.insert();
+	}
+
+	public void markAll() throws SQLException
+	{
+		DatabaseUtils.execute(mProvider.getConnection().getWrappedConnection(),
+			"UPDATE " + TABLE + " SET " + Columns.MARK + "=1");
 	}
 
 	public void unmark(long _id) throws SQLException
@@ -138,6 +155,7 @@ public class PlaylistDAO extends AbstractDAO
 		private final int mColumnSyncTime;
 		private final int mColumnName;
 		private final int mColumnCreatedDate;
+		private final int mColumnFilename;
 
 		private static final Creator<PlaylistEntryDAO> CREATOR = new Creator<PlaylistEntryDAO>()
 		{
@@ -153,9 +171,9 @@ public class PlaylistDAO extends AbstractDAO
 			return CREATOR.newInstance(set);
 		}
 
-		private PlaylistEntryDAO(SyncableProvider provider) throws SQLException
+		private PlaylistEntryDAO(SyncableProvider provider, String table) throws SQLException
 		{
-			this(getResultSet(provider, TABLE));
+			this(getResultSet(provider, table));
 		}
 
 		private PlaylistEntryDAO(ResultSet set) throws SQLException
@@ -168,6 +186,7 @@ public class PlaylistDAO extends AbstractDAO
 			mColumnSyncTime = map.getColumnIndex(Columns._SYNC_TIME);
 			mColumnName = map.getColumnIndex(Columns.NAME);
 			mColumnCreatedDate = map.getColumnIndex(Columns.CREATED_DATE);
+			mColumnFilename = map.getColumnIndex(Columns.FILENAME);
 		}
 
 		public long getId() throws SQLException
@@ -188,6 +207,11 @@ public class PlaylistDAO extends AbstractDAO
 		public long getCreatedDate() throws SQLException
 		{
 			return mSet.getLong(mColumnCreatedDate);
+		}
+
+		public String getFilename() throws SQLException
+		{
+			return mSet.getString(mColumnFilename);
 		}
 
 		public String getContentType()
@@ -222,13 +246,20 @@ public class PlaylistDAO extends AbstractDAO
 	{
 		public TableMerger()
 		{
-			super((SyncableProvider)getProvider(), TABLE);
+			super((SyncableProvider)getProvider(), TABLE, DELETED_TABLE);
 		}
 
 		@Override
 		public SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs) throws SQLException
 		{
-			return new PlaylistEntryDAO(clientDiffs);
+			return new PlaylistEntryDAO(clientDiffs, TABLE);
+		}
+
+		@Override
+		public SyncableEntryDAO getDeletedEntryDAO(SyncableProvider clientDiffs)
+				throws SQLException
+		{
+			return new PlaylistEntryDAO(clientDiffs, DELETED_TABLE);
 		}
 	}
 }

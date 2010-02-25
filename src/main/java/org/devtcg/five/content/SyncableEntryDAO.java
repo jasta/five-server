@@ -23,5 +23,6 @@ public interface SyncableEntryDAO
 	public void close() throws SQLException;
 	public String getContentType();
 	public boolean moveToNext() throws SQLException;
+	public long getId() throws SQLException;
 	public Protos.Record getEntry() throws SQLException;
 }

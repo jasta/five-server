@@ -31,7 +31,8 @@ import org.devtcg.five.util.StringUtils;
 
 public class AlbumDAO extends AbstractDAO
 {
-	private static final String TABLE = "albums";
+	static final String TABLE = "albums";
+	private static final String DELETED_TABLE = "albums_deleted";
 
 	public interface Columns extends BaseColumns
 	{
@@ -64,6 +65,12 @@ public class AlbumDAO extends AbstractDAO
 	}
 
 	@Override
+	public String getDeletedTable()
+	{
+		return DELETED_TABLE;
+	}
+
+	@Override
 	public void createTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
@@ -83,12 +90,8 @@ public class AlbumDAO extends AbstractDAO
 		DatabaseUtils.execute(conn, "CREATE UNIQUE INDEX " +
 			"idx_" + Columns.ARTIST_ID + "_" + Columns.NAME_MATCH + " ON " + TABLE +
 			" (" + Columns.ARTIST_ID + ", " + Columns.NAME_MATCH + ")");
-	}
 
-	@Override
-	public void dropTables(Connection conn) throws SQLException
-	{
-		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + TABLE);
+		createDeletedTable(conn);
 	}
 
 	public AlbumEntryDAO getAlbum(long id) throws SQLException
@@ -108,6 +111,18 @@ public class AlbumDAO extends AbstractDAO
 			nameMatch, String.valueOf(artistId));
 
 		return AlbumEntryDAO.newInstance(set);
+	}
+
+	public AlbumEntryDAO getEmptyAlbums() throws SQLException
+	{
+		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
+				"SELECT " + fullColumn("*") + " FROM " + TABLE +
+				" LEFT JOIN " + SongDAO.TABLE + " ON " +
+				fullColumn(SongDAO.TABLE, SongDAO.Columns.ALBUM_ID) + " = " +
+					fullColumn(Columns._ID) +
+				" WHERE " + fullColumn(SongDAO.TABLE, SongDAO.Columns._ID) + " IS NULL");
+
+		return new AlbumEntryDAO(set);
 	}
 
 	public long insert(long artistId, String name) throws SQLException
@@ -169,9 +184,9 @@ public class AlbumDAO extends AbstractDAO
 			return CREATOR.newInstance(set);
 		}
 
-		private AlbumEntryDAO(SyncableProvider provider) throws SQLException
+		private AlbumEntryDAO(SyncableProvider provider, String table) throws SQLException
 		{
-			this(getResultSet(provider, TABLE));
+			this(getResultSet(provider, table));
 		}
 
 		private AlbumEntryDAO(ResultSet set) throws SQLException
@@ -255,13 +270,19 @@ public class AlbumDAO extends AbstractDAO
 	{
 		public TableMerger()
 		{
-			super((SyncableProvider)getProvider(), TABLE);
+			super((SyncableProvider)getProvider(), TABLE, DELETED_TABLE);
 		}
 
 		@Override
 		public SyncableEntryDAO getEntryDAO(SyncableProvider clientDiffs) throws SQLException
 		{
-			return new AlbumEntryDAO(clientDiffs);
+			return new AlbumEntryDAO(clientDiffs, TABLE);
+		}
+
+		@Override
+		public SyncableEntryDAO getDeletedEntryDAO(SyncableProvider clientDiffs) throws SQLException
+		{
+			return new AlbumEntryDAO(clientDiffs, DELETED_TABLE);
 		}
 	}
 

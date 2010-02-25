@@ -15,13 +15,13 @@
 package org.devtcg.five.meta.dao;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.devtcg.five.content.SyncableEntryDAO;
 import org.devtcg.five.content.AbstractTableMerger.SyncableColumns;
 import org.devtcg.five.persistence.DatabaseUtils;
+import org.devtcg.five.persistence.DeleteHelper;
 import org.devtcg.five.persistence.InsertHelper;
 import org.devtcg.five.persistence.Provider;
 import org.devtcg.five.persistence.SyncableProvider;
@@ -31,6 +31,7 @@ public abstract class AbstractDAO
 	protected final Provider mProvider;
 
 	private InsertHelper mInserter;
+	private DeleteHelper mDeleter;
 
 	public AbstractDAO(Provider provider)
 	{
@@ -57,20 +58,65 @@ public abstract class AbstractDAO
 		return mProvider;
 	}
 
-	public abstract void createTables(Connection conn) throws SQLException;
-	public abstract void dropTables(Connection conn) throws SQLException;
-
 	public abstract String getTable();
+	public abstract String getDeletedTable();
+
+	public abstract void createTables(Connection conn) throws SQLException;
+
+	public void dropTables(Connection conn) throws SQLException
+	{
+		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + getTable());
+		DatabaseUtils.execute(conn, "DROP TABLE IF EXISTS " + getDeletedTable());
+	}
+
+	protected void createDeletedTable(Connection conn) throws SQLException
+	{
+		DatabaseUtils.execute(conn, "CREATE TABLE " + getDeletedTable() + " (" +
+				BaseColumns._ID + " INTEGER, " +
+				BaseColumns._SYNC_TIME + " BIGINT, " +
+				BaseColumns._SYNC_ID + " VARCHAR, " +
+				"UNIQUE (" + BaseColumns._ID + ") " +
+				")");
+	}
 
 	protected synchronized InsertHelper getInsertHelper() throws SQLException
 	{
 		if (mInserter == null)
 		{
 			mInserter = new InsertHelper(mProvider.getConnection().getWrappedConnection(),
-				getTable());
+					getTable());
 		}
 
 		return mInserter;
+	}
+
+	protected synchronized DeleteHelper getDeleteHelper() throws SQLException
+	{
+		if (mDeleter == null)
+		{
+			mDeleter = new DeleteHelper(mProvider.getConnection().getWrappedConnection(),
+					getTable(), getDeletedTable());
+		}
+
+		return mDeleter;
+	}
+
+	/**
+	 * Utility for constructing queries that involve multiple tables.
+	 */
+	String fullColumn(String table, String columnName)
+	{
+		return table + "." + columnName;
+	}
+
+	String fullColumn(String columnName)
+	{
+		return getTable() + "." + columnName;
+	}
+
+	public void delete(long id) throws SQLException
+	{
+		getDeleteHelper().delete(id);
 	}
 
 	protected void updateColumn(long id, String column, String value) throws SQLException

@@ -59,6 +59,12 @@ public class ImageDAO extends AbstractDAO
 	}
 
 	@Override
+	public String getDeletedTable()
+	{
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
 	public void createTables(Connection conn) throws SQLException
 	{
 		DatabaseUtils.execute(conn, "CREATE TABLE " + TABLE + " (" +
@@ -202,9 +208,9 @@ public class ImageDAO extends AbstractDAO
 			return CREATOR.newInstance(set);
 		}
 
-		private ImageEntryDAO(SyncableProvider provider) throws SQLException
+		private ImageEntryDAO(SyncableProvider provider, String table) throws SQLException
 		{
-			this(getResultSet(provider, TABLE));
+			this(getResultSet(provider, table));
 		}
 
 		private ImageEntryDAO(ResultSet set) throws SQLException

@@ -15,14 +15,47 @@
 package org.devtcg.five.persistence;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.devtcg.five.content.Cursor;
 
-public class DatabaseUtils {
+public class DatabaseUtils
+{
+	/**
+	 * Starts a transaction.  The normal pattern for using this API is:
+	 * <p>
+	 * <pre>
+	 *   DatabaseUtils.beginTransaction(conn);
+	 *   try {
+	 *     ...
+	 *     DatabaseUtils.setTransactionSuccessful(conn);
+	 *   } finally {
+	 *     DatabaseUtils.endTransaction(conn);
+	 *   }
+	 * </pre>
+	 */
+	public static void beginTransaction(Connection conn) throws SQLException
+	{
+		conn.setAutoCommit(false);
+	}
+
+	public static void setTransactionSuccessful(Connection conn) throws SQLException
+	{
+		conn.commit();
+		conn.setAutoCommit(true);
+	}
+
+	public static void endTransaction(Connection conn) throws SQLException
+	{
+		if (!conn.getAutoCommit())
+		{
+			conn.rollback();
+			conn.setAutoCommit(true);
+		}
+	}
+
 	private static PreparedStatement createPreparedStatement(Connection conn,
 		String sql, String[] args) throws SQLException
 	{
