@@ -92,7 +92,7 @@ public class PlaylistSongDAO extends AbstractDAO
 	public PlaylistSongEntryDAO getSongsByPlaylist(long playlistId) throws SQLException
 	{
 		ResultSet set = DatabaseUtils.executeForResult(mProvider.getConnection().getWrappedConnection(),
-				"SELECT * FROM " + TABLE + " WHERE " + Columns.PLAYLIST_ID + " = ?");
+				"SELECT * FROM " + TABLE + " WHERE " + Columns.PLAYLIST_ID + " = " + playlistId);
 
 		return new PlaylistSongEntryDAO(set);
 	}
